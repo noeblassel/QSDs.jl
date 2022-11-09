@@ -75,7 +75,7 @@ if !isdir("results_optim")
     mkdir("results_optim")
 end
 
-f=open("results_optim/results_$(β)_$(N).out")
+f=open("results_optim/results_$(β)_$(N).out","w")
 println(f,α_star)
 println(f,J_hist)
 println(f,grad_hist)
