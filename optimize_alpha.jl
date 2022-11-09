@@ -39,6 +39,7 @@ W=calc_weights_periodic(mu,D)
         α_star = copy(α0)
         J_hist=Float64[]
         grad_hist=Float64[]
+        N=length(α_star)
         for i=1:max_iter
             λs,_,us = SQSD_1D_FEM(V,β,α_star;weights=weights)
             λ1,λ2=λs
@@ -59,6 +60,10 @@ W=calc_weights_periodic(mu,D)
                 push!(grad_hist,norm(gradient))
                 println("$i / $max_iter")
                 flush(stdout)
+                f=open("results_optim/results_$(β)_$(N).out","w")
+                println(f,α_star)
+                println(f,J_hist)
+                println(f,grad_hist)
             end
 
             #println((λ2-λ1)/λ1)
@@ -76,6 +81,6 @@ if !isdir("results_optim")
 end
 
 f=open("results_optim/results_$(β)_$(N).out","w")
-println(f,α_star)
-println(f,J_hist)
-println(f,grad_hist)
+                println(f,α_star)
+                println(f,J_hist)
+                println(f,grad_hist)
