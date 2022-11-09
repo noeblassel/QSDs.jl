@@ -57,6 +57,8 @@ W=calc_weights_periodic(mu,D)
             if i%log_every==0
                 push!(J_hist,(λ2-λ1)/λ1)
                 push!(grad_hist,norm(gradient))
+                println("$i / $max_iter")
+                flush(stdout)
             end
 
             #println((λ2-λ1)/λ1)
