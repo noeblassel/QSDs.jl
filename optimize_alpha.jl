@@ -40,7 +40,7 @@ W=calc_weights_periodic(mu,D)
         J_hist=Float64[]
         grad_hist=Float64[]
         for i=1:max_iter
-            λs,_,us = SQSD_1D_FEM(V,β,α_star)
+            λs,_,us = SQSD_1D_FEM(V,β,α_star;weights=weights)
             λ1,λ2=λs
             u1,u2=collect.(Float64,eachcol(us))
 
