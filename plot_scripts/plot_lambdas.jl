@@ -4,6 +4,7 @@ using LinearAlgebra, Cubature
 
 mode=ARGS[1]
 N=parse(Int64,ARGS[2])
+β = parse(Float64,ARGS[3])
 
 if mode=="plot"
     plot_mode=true
@@ -20,7 +21,6 @@ V(q)=cos(6π*q) + cos(4π*q)/2
 dV(q)= -6π*sin(6π*q) -2π*sin(4π*q)
 d2V(q) = -36*π^2*cos(6π*q) - 8π^2*cos(4π*q)
 
-β = 2.0
 
 W(q) = (β*dV(q)^2/2-d2V(q))/2
 
@@ -82,7 +82,7 @@ if plot_mode
 
     plot!(fig_λ1,10 .^ lg_alpha_range,λ1s_schrodinger,label="schrodinger",linewidth=1,color=:blue,linestyle=:dot)
     plot!(fig_gap,10 .^ lg_alpha_range,gaps_schrodinger,label="schrodinger",linewidth=1,color=:blue,linestyle=:dot)
-    savefig(plot(fig_λ1,fig_gap),"./figures/lambdas.pdf")
+    savefig(plot(fig_λ1,fig_gap),"./figures/lambdas_$β.pdf")
 else
     f=open("results_lambdas.jl","w")
     println(f,"αs=[",join(10 .^ lg_alpha_range,","),"]")
