@@ -39,7 +39,43 @@ for (i,x)=enumerate(D[1:end-1])
     end
 end
 
+<<<<<<< HEAD
 α=SoftKillingRate(kill_rate,D,fixed_indices)
+=======
+    function optimize_alpha(V,β,α0;weights, grad_tol = 1e-6, max_iter=100000, cutoff=10000.0, lr=0.1, log_every=1000)
+        α_star = copy(α0)
+        J_hist=Float64[]
+        grad_hist=Float64[]
+        N=length(α_star)
+        for i=1:max_iter
+            λs,_,us = SQSD_1D_FEM(V,β,α_star;weights=weights)
+            λ1,λ2=λs
+            u1,u2=collect.(Float64,eachcol(us))
+
+            ∂λ1= Dλ_Dα(u1,weights=weights)
+            ∂λ2 = Dλ_Dα(u2,weights=weights)
+
+            gradient = (λ1 * ∂λ2 - λ2 * ∂λ1) / λ1^2
+
+            (maximum(abs.(gradient)) < grad_tol) && return α_star,J_hist,grad_hist
+
+            α_star -= lr * gradient
+            α_star = clamp.(α_star,0.0,cutoff)
+
+            if i%log_every==0
+                push!(J_hist,(λ2-λ1)/λ1)
+                push!(grad_hist,norm(gradient))
+                println("$i / $max_iter")
+                flush(stdout)
+                f=open("results_optim/results_$(β)_$(N).out","w")
+                println(f,α_star)
+                println(f,J_hist)
+                println(f,grad_hist)
+            end
+
+            #println((λ2-λ1)/λ1)
+        end
+>>>>>>> 2e6276a403415e8692b506dfba4b4a0422fd7751
 
 function pw_constant(q)
     ix=1
@@ -58,4 +94,11 @@ g(λ1,λ2) = λ2/λ1
 ∂1g(λ1,λ2)=-λ2/λ1^2
 ∂2g(λ1,λ2)=1/λ1
 
+<<<<<<< HEAD
 grad_hist,obj_hist,λ1_hist,λ2_hist = optim_gradient_ascent!(W_pot,β,g,∂1g,∂2g,α; max_iterations=Niter, lr=10.0, η=0.9, log_every=1000,grad_tol=1e-7,obj_tol=1e-11,clip=true)
+=======
+f=open("results_optim/results_$(β)_$(N).out","w")
+                println(f,α_star)
+                println(f,J_hist)
+                println(f,grad_hist)
+>>>>>>> 2e6276a403415e8692b506dfba4b4a0422fd7751
