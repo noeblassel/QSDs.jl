@@ -1,50 +1,3 @@
-function P1_element(qi_m1::Float64,qi::Float64,qi_p1::Float64)
-    function P1(q::Float64)
-        if qi_m1 < q < qi_p1
-            return (q < qi) ? 1 - ( qi - q ) / ( qi - qi_m1 ) : 1 - ( q - qi ) /  ( qi_p1 - qi )
-        else
-            return 0.0
-        end
-    end
-    return P1
-end
-
-function boundary_P1_element(q_m1::Float64,q_periodic_right::Float64,q_periodic_left::Float64,q_p1::Float64)
-    function P1_diff(q::Float64)
-        if q_m1 < q < q_periodic_right
-            return 1 - (q_periodic_right-q)/(q_periodic_right - q_m1)
-        elseif q_periodic_left < q < q_p1
-            return 1 - (q-q_periodic_left)/(q_p1-q_periodic_left)
-        else
-            return 0.0
-        end
-    end
-end
-
-function P1_element_diff(qi_m1::Float64,qi::Float64,qi_p1::Float64)
-    function P1_diff(q::Float64)
-        if qi_m1 < q < qi_p1
-            return (q < qi) ? inv( qi - qi_m1 ) : -inv( qi_p1 - qi )
-        else
-            return 0.0
-        end
-    end
-    return P1_diff
-end
-
-function boundary_P1_element_diff(q_m1::Float64,q_periodic_right::Float64,q_periodic_left::Float64,q_p1::Float64)
-    function P1_diff(q::Float64)
-        if q_m1 < q < q_periodic_right
-            return inv(q_periodic_right-q_m1)
-        elseif q_periodic_left < q < q_p1
-            return - inv(q_p1 - q_periodic_left)
-        else
-            return 0.0
-        end
-    end
-end
-
-
 """
 Precompute weights for the M and δM matrices in the SQSD_1D_FEM function, to avoid redudant quadrature calculations.
 
@@ -52,54 +5,97 @@ Arguments:  mu::Function, the invariant measure
             D::Vector{Float64}, the mesh points. The last element of D is the periodic image of the first element.
 """
 function calc_weights_periodic(mu::Function,D::Vector{Float64})
-
     N = length(D)-1 # D= [q_1, ... , q_{N}, q_{N+1}] with q_1 ≅ q_{N+1}
-    elements = [P1_element(D[i],D[i+1],D[i+2]) for i=1:N-1]
-    boundary_element = boundary_P1_element(D[N],1.0,0.0,D[2]) # P1 element straddling the boundary for periodic boundary conditions
-
-    elements_diff = [P1_element_diff(D[i],D[i+1],D[i+2]) for i=1:N-1]
-    boundary_element_diff = boundary_P1_element_diff(D[N],1.0,0.0,D[2])
-
     diag_weights_diff = zeros(N) # ⟨∇ϕ_i,∇ϕ_i⟩μ on each of the [q_{i},q_{i+2}]
     off_diag_weights_diff = zeros(N) # ⟨∇ϕ_i, ∇ϕ_{i+1}⟩μ on each of the [q_{i+1},q_{i+2}]
 
     diag_weights = zeros(2N) # ∫ϕ_i^2 dμ on each of the [q_i,q_{i+1}] and [q_{i+1},q_{i+2}]
     off_diag_weights = zeros(N) # ∫ ϕ_i ϕ_{i+1}dμ on each of the [q_{i+1},q_{i+2}]
 
-    # diagonal terms
-    for i=1:N-1
-        diag_weights_diff[i],err = hquadrature(q->mu(q)*elements_diff[i](q)^2,D[i],D[i+2])
-    end
+    for i=1:N
+        if i<N
+            a=D[i]
+            b=D[i+1]
+            c=D[i+1]
+            d=D[i+2]
+        else
+            a=D[N]
+            b=D[N+1]
+            c=D[1]
+            d=D[2]
+        end
 
-    # periodic boundary diagonal term
-    inta,_ = hquadrature(q->mu(q)*boundary_element_diff(q)^2,D[N],D[N+1])
-    intb,_ = hquadrature(q->mu(q)*boundary_element_diff(q)^2,D[1],D[2])
-    diag_weights_diff[N] = inta + intb
+        f1(t) = mu(a+t*(b-a))
+        f2(t) = mu(c + t*(d-c))
+        f3(t) = f1(t)*t^2
+        f4(t) = f2(t)*(1-t)^2
+        f5(t) = f2(t)*t*(1-t)
 
-    for i=1:N-2
-        off_diag_weights_diff[i],_= hquadrature(q->mu(q)*elements_diff[i](q)*elements_diff[i+1](q),D[i+1],D[i+2])
-    end
+        int_1,_ = hquadrature(f1,0,1) 
+        int_2,_ = hquadrature(f2,0,1) 
+        int_3,_ = hquadrature(f3,0,1)
+        int_4,_ = hquadrature(f4,0,1)
+        int_5,_ = hquadrature(f5,0,1)
 
-    # periodic boundary off-diagonal terms
-    off_diag_weights_diff[N-1],_ = hquadrature(q->mu(q)*boundary_element_diff(q)*elements_diff[N-1](q),D[N],D[N+1])
-    off_diag_weights_diff[N],_ = hquadrature(q->mu(q)*boundary_element_diff(q)*elements_diff[1](q),D[1],D[2])
+        diag_weights_diff[i] = int_1 / (b-a) + int_2 / (d-c)
+        diag_weights[2i-1] = int_3 * (b-a)
+        diag_weights[2i] = int_4 * (d-c)
 
-    for i=1:N-1
-        diag_weights[2i-1],_ = hquadrature(q->mu(q)*elements[i](q)^2,D[i],D[i+1])
-        diag_weights[2i],_ = hquadrature(q->mu(q)*elements[i](q)^2,D[i+1],D[i+2])
-    end
+        off_diag_weights_diff[i] = -int_2 / (d-c)
+        off_diag_weights[i] = int_5 * (d-c)
 
-    diag_weights[2N-1],_ = hquadrature(q->mu(q)*boundary_element(q)^2,D[N],D[N+1])
-    diag_weights[2N],_ = hquadrature(q->mu(q)*boundary_element(q)^2,D[1],D[2])
-
-    for i=1:N-2
-        off_diag_weights[i],_ = hquadrature(q->mu(q)*elements[i](q)*elements[i+1](q),D[i+1],D[i+2])
-    end
-
-    off_diag_weights[N-1],_ = hquadrature(q->mu(q)*elements[N-1](q)*boundary_element(q),D[N],D[N+1])
-    off_diag_weights[N],_ = hquadrature(q->mu(q)*elements[1](q)*boundary_element(q),D[1],D[2])
+    end   
 
     return diag_weights_diff,off_diag_weights_diff,diag_weights,off_diag_weights
+end
+
+function calc_weights_schrodinger_periodic(W::Function, D::Vector{Float64})
+    N = length(D)-1 # D= [q_1, ... , q_{N}, q_{N+1}] with q_1 ≅ q_{N+1}
+
+    diag_weights_diff = zeros(N) # ∫ ∇ϕ_i⋅∇ϕ_i on each of the [q_{i},q_{i+2}]
+    off_diag_weights_diff = zeros(N) # ∫∇ϕ_i⋅∇ϕ_{i+1}⟩ on each of the [q_{i+1},q_{i+2}]
+
+    diag_weights_pot = zeros(N) # ∫W ϕ_i^2 on each of the [q_i,q_{i+2}]
+    off_diag_weights_pot = zeros(N) # ∫W ϕ_i ϕ_{i+1}dμ on each of the [q_{i+1},q_{i+2}]
+
+    diag_weights = zeros(2N) # ∫ ϕ_i ϕ_i on each of the [q_{i},q_{i+1}] and [q_{i+1},q_{i+2}]
+    off_diag_weights = zeros(N) # ∫ ϕ_i ϕ_{i+1} on each of the [q_{i+1},q_{i+2}] 
+
+    for i=1:N
+        if i<N
+            a=D[i]
+            b=D[i+1]
+            c=D[i+1]
+            d=D[i+2]
+        else
+            a=D[N]
+            b=D[N+1]
+            c=D[1]
+            d=D[2]
+        end
+
+        f1(t) = W(a+t*(b-a))*t^2
+        f2(t) = W(c + t*(d-c))*(1-t)^2
+        f3(t) = W(c + t*(d-c))*t*(1-t)
+
+        int_1,_ = hquadrature(f1,0,1) 
+        int_2,_ = hquadrature(f2,0,1) 
+        int_3,_ = hquadrature(f3,0,1)
+
+        diag_weights_diff[i] = 1 / (b-a) + 1 / (d-c)
+
+        diag_weights_pot[i] = int_1 * (b-a) + int_2 * (d-c)
+
+        diag_weights[2i-1] = (b-a) / 3
+        diag_weights[2i] = (d-c) / 3
+
+        off_diag_weights_diff[i] = - 1 / (d-c)
+        off_diag_weights_pot[i] = int_3 * (d-c)
+        off_diag_weights[i] = (d-c) / 6
+
+    end   
+
+    return diag_weights_diff, off_diag_weights_diff, diag_weights_pot, off_diag_weights_pot, diag_weights, off_diag_weights
 end
 
 function QSD_1D_FEM(V::Function, β::Float64,Ωl::Float64,Ωr::Float64,N::Int64) #requires Cubature and LinearAlgebra
@@ -127,37 +123,101 @@ function QSD_1D_FEM(V::Function, β::Float64,Ωl::Float64,Ωr::Float64,N::Int64)
 
      # Compute the weights, 
      #       weights[i]= μ([q_i,q_i+h])
-    
-    elements_diff=[P1_element_diff(Ω[i],Ω[i+1],Ω[i+2]) for i=1:N-2]
 
     # Compute M -- in fact we compute an unnormalized version of M, since we only care about ratios of eigenvalues
     M=zeros(N-2,N-2)
+    B=zeros(N-2,N-2)
 
     for i=1:N-2 #diagonal terms
-        M[i,i],_ = hquadrature(q->mu(q)*elements_diff[i](q)^2,Ω[i],Ω[i+2])
+        
+        f1(t) = mu(Ω[i] + t*(Ω[i+1]-Ω[i]))*t^2 # changes of variables for numerical stability
+        f2(t) = mu(Ω[i+1]+t*(Ω[i+2]-Ω[i+1]))*(1-t)^2 # for the ∫ϕi^2μ
+        
+        f3(t) = mu(Ω[i]+t*(Ω[i+1]-Ω[i]))
+        f4(t) = mu(Ω[i+1]+t*(Ω[i+2]-Ω[i+1]))
+
+        int_a,_ = hquadrature(f1,0,1)
+        int_b,_ = hquadrature(f2,0,1)
+
+        int_c,_=hquadrature(f4,0,1)
+        int_d,_ = hquadrature(f3,0,1)
+
+        B[i,i] = int_a *(Ω[i+1]-Ω[i]) + int_b * (Ω[i+2]-Ω[i+1])
+        M[i,i] = int_c / (Ω[i+1]-Ω[i]) + int_d / (Ω[i+2]-Ω[i+1])
+
     end
 
-    for i=2:N-2 #off-diagonal terms
-        M[i,i-1],_ = M[i-1,i],_ = hquadrature(q->mu(q)*elements_diff[i](q)*elements_diff[i-1](q),Ω[i-1],Ω[i+2])
+    for i=1:N-3 #off-diagonal terms
+        f1(t) = mu(Ω[i+1] + t*(Ω[i+2]-Ω[i+1]))*t*(1-t)
+        f2(t) = mu(Ω[i+1] +t*(Ω[i+2]-Ω[i+1]))
+
+        int_a,_ = hquadrature(f1,0,1)
+        int_b,_ = hquadrature(f2,0,1)
+
+
+        B[i,i+1] = B[i+1,i] = int_a *(Ω[i+2]-Ω[i+1])
+        M[i,i+1] = M[i+1,i] = -int_b / (Ω[i+2]-Ω[i+1])
+
     end
 
+    M ./= β
     # Note M has zero-sum rows, so that it actually is the generator of a discrete-state jump process
-    M = SymTridiagonal(M)
+    M = Symmetric(M)
+    B = Symmetric(B)
     
-    λs,us=eigen(M,1:2)
-    #add Dirichlet boundary conditions
+    λs,us=eigen(M,B)
 
-    u1=us[:,1]
-    push!(u1,0.0) 
-    pushfirst!(u1,0.0)
-    
-    qsd = u1 .* mu.(Ω)
-    I = h*sum(qsd)
-    qsd ./= I
-    return λs,qsd,us
+    return λs[1:2],us[:,1:2]
 end
 
 QSD_1D_FEM(V, β, domain::Tuple{Float64,Float64},N) = QSD_1D(V,β,domain[1],domain[2],N)
+
+function QSD_1D_FEM_schrodinger(W::Function, β::Float64,Ωl::Float64,Ωr::Float64,N::Int64)
+    mu(q)=exp(-β*V(q))
+    h=(Ωr-Ωl)/N
+
+    Ω=collect(Float64,range(Ωl,Ωr,N))
+
+    # Compute M -- in fact we compute an unnormalized version of M, since we only care about ratios of eigenvalues
+    M=zeros(N-2,N-2)
+    B=zeros(N-2,N-2)
+
+    for i=1:N-2 #diagonal terms ∫Wϕi^2 +∫∇ϕi^2/β and ∫ϕi^2
+
+        #use change of variables for numerical stability
+        f(t) = W(Ω[i]+t*(Ω[i+1]-Ω[i]))*t^2
+        g(t) = W(Ω[i]+t*(Ω[i+2]-Ω[i+1]))*(1-t)^2
+
+        int_a,_ = hquadrature(f, 0,1) #∫Wϕi^2 between qi and qi+1 (up to a (qi+1-qi) factor)
+        int_b,_ = hquadrature(g, 0, 1) #Wϕi^2 between qi+1 and qi+2 (up to a (qi+2-qi+1) factor)
+
+        int_c = inv(Ω[i+1]-Ω[i]) + inv(Ω[i+2]-Ω[i+1]) #∫∇ϕi^2 between qi and qi+2
+
+        int_d = (Ω[i+2]-Ω[i])/3 #∫ϕi^2 between qi and qi+2
+
+        M[i,i] = int_a * (Ω[i+1]-Ω[i]) + int_b * (Ω[i+2]-Ω[i+1]) + int_c / β
+        B[i,i] = int_d
+    end
+
+    for i=1:N-3 #off-diagonal terms
+        f(t) = W(Ω[i+1]+t*(Ω[i+2]-Ω[i+1]))*t*(1-t)
+        int_a,_ = hquadrature(f,0,1) #∫Wϕiϕi+1 between qi+1 and qi+2 (up to a factor)
+        int_b = - inv(Ω[i+2]-Ω[i+1]) #∫∇ϕi∇ϕi+1 between qi+1 and qi+2
+        int_c = (Ω[i+2]-Ω[i+1]) / 6 #∫ϕiϕi+1 between qi+1 and qi+2
+
+        M[i,i+1] = M[i+1,i] = int_a * (Ω[i+2]-Ω[i+1]) + int_b / β
+        B[i,i+1] = B[i+1,i] = int_c
+
+    end
+
+    # Note M has zero-sum rows, so that it actually is the generator of a discrete-state jump process
+    M = Symmetric(M)
+    B = Symmetric(B)
+    
+    λs,us=eigen(M,B)
+
+    return λs[1:2],us[:,1:2]
+end
 
 """
 Computes the QSD for the Overdamped Langevin dynamics in a 1D potential with soft killing, using a finite-element method on a regular mesh
@@ -195,10 +255,13 @@ function SQSD_1D_FEM(V::Function,β::Float64,α::Vector{Float64}; weights = noth
 
     # FEM discretization of (negative) Soft-Measure perturbation -- assuming α is constant on each subinterval of the domain
 
+    B=zeros(N,N)
     δM = zeros(N,N)
 
     for i=1:N
         j = (i == N) ? 1 : i+1
+        B[i,i] = diag_weights[2i-1] + diag_weights[2i]
+        B[i,j] = off_diag_weights[i]
         δM[i,i] = α[i]*diag_weights[2i-1] + α[j]*diag_weights[2i]
         δM[i,j] = δM[j,i] = α[j] * off_diag_weights[i]
     end
@@ -206,13 +269,48 @@ function SQSD_1D_FEM(V::Function,β::Float64,α::Vector{Float64}; weights = noth
     # diagonalize discretized operator
 
     H = Symmetric(M + δM)
-    λs,us=eigen(H,1:2)
-    u1=us[:,1]
+    B= Symmetric(B)
 
-    qsd = u1 .* mu.(D[2:N+1])
+    λs,us=eigen(H,B)
 
-    I= h * sum(qsd)
-    qsd /= I
-    
-    return λs,qsd,us,H
+    return λs[1:2],us[:,1:2]
+end
+
+"""solve the discretized eigenvalue problem associated with the Schrodinger-like eigenproblem Δu/β-Wu-αu = λu. weights should be the output of 
+calc_weights_schrodinger_periodic(W,D) where D is some spatial domain and W is the potential.
+"""
+function SQSD_1D_FEM_schrodinger(W::Function,β::Float64,α::Vector{Float64}; weights = nothing)
+
+    N=length(α)
+
+    if weights == nothing #assume the spatial domain is [0,1]
+        diag_weights_diff, off_diag_weights_diff, diag_weights_pot, off_diag_weights_pot, diag_weights, off_diag_weights=calc_weights_schrodinger_periodic(W,collect(Float64,range(0,1,N+1)))
+    else
+        diag_weights_diff, off_diag_weights_diff, diag_weights_pot, off_diag_weights_pot, diag_weights, off_diag_weights=weights
+    end
+
+   # FEM discretization of eigenvalue problem, yielding a generalized eigenvalue problem, A(α)u = λMu, ( M ≅ matrix of the restriction of (u,v) -> ∫uv to P1 subspace, A(α)≅ matrix of the restriction of (u,v) -> ∫-∇u⋅∇v +Wuv -αuv to P1 subspace)
+
+   M=zeros(N,N)
+   B=zeros(N,N) 
+
+   for i=1:N
+       j = (i == N) ? 1 : i+1
+       M[i,i] = diag_weights_pot[i] + diag_weights_diff[i]/β + α[i]*diag_weights[2i-1] + α[j]*diag_weights[2i]
+       M[i,j] = M[j,i]= off_diag_weights_pot[i] + off_diag_weights_diff[i]/β + α[j]*off_diag_weights[i]
+
+       #mass matrix
+       B[i,i] = diag_weights[2i-1] + diag_weights[2i]
+       B[i,j] = B[j,i] = off_diag_weights[i]
+   end
+
+   #diagonalize discretized operator
+
+   M = Symmetric(M) #to retrieve correct eigenvalues
+   B = Symmetric(B)
+#=    println(M)
+   println(diag_weights) =#
+   λs,us=eigen(M,B)
+   
+   return λs[1:2],us[:,1:2]
 end
