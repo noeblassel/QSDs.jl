@@ -31,11 +31,9 @@ mu(q) = mu_tilde(q) / Z
 saddle_points = [0.350482,0.649518]
 
 if plot_mode
-    fig_λ1= plot(xlabel="α",ylabel="λ1",xaxis=:log,yaxis=:log)
-    fig_gap=plot(xlabel="α",ylabel="λ2-λ1",xaxis=:log,yaxis=:log)
+    fig_λ1= plot(xlabel="α",ylabel="λ1",xaxis=:log,yaxis=:log,legend=:bottomright)
+    fig_gap=plot(xlabel="α",ylabel="λ2-λ1",xaxis=:log,yaxis=:log,legend=:topleft)
 
-    fig_schrodinger_λ1= plot(xlabel="α",ylabel="λ1",xaxis=:log,yaxis=:log)
-    fig_schrodinger_gap=plot(xlabel="α",ylabel="λ2-λ1",xaxis=:log,yaxis=:log)
 end
 
 domain=collect(Float64,range(0,1,N+1))
@@ -53,7 +51,7 @@ function fill_αs!(val::Float64)
     end
 end
 
-lg_alpha_range= -4:0.01:4
+lg_alpha_range= -4:0.05:4
 
 λ1s_classic=Float64[]
 gaps_classic=Float64[]
@@ -79,9 +77,8 @@ for α= 10 .^ lg_alpha_range
 end
 
 if plot_mode
-    plot!(fig_λ1,10 .^ lg_alpha_range,λ1s_classic,label="classic",linewidth=1,color=:red,linestyle=:dot)
-    plot!(fig_gap,10 .^ lg_alpha_range,gaps_classic,label="classic",linewidth=1,color=:red,linestyle=:dot)
-    # savefig(plot(fig_classic_λ1,fig_classic_gap),"./figures/lambdas_classic.pdf")#=  =#
+    plot!(fig_λ1,10 .^ lg_alpha_range,λ1s_classic,label="classic",linewidth=1,color=:red,linestyle=:dash)
+    plot!(fig_gap,10 .^ lg_alpha_range,gaps_classic,label="classic",linewidth=1,color=:red,linestyle=:dash)
 
     plot!(fig_λ1,10 .^ lg_alpha_range,λ1s_schrodinger,label="schrodinger",linewidth=1,color=:blue,linestyle=:dot)
     plot!(fig_gap,10 .^ lg_alpha_range,gaps_schrodinger,label="schrodinger",linewidth=1,color=:blue,linestyle=:dot)
