@@ -4,7 +4,7 @@ Precompute weights for the M and δM matrices in the SQSD_1D_FEM function, to av
 Arguments:  mu::Function, the invariant measure
             D::Vector{Float64}, the mesh points. The last element of D is the periodic image of the first element.
 """
-function calc_weights_periodic(mu::Function,D::Vector{Float64})
+function calc_weights_periodic(mu::Function,D::AbstractVector{Float64})
     N = length(D)-1 # D= [q_1, ... , q_{N}, q_{N+1}] with q_1 ≅ q_{N+1}
     diag_weights_diff = zeros(N) # ⟨∇ϕ_i,∇ϕ_i⟩μ on each of the [q_{i},q_{i+2}]
     off_diag_weights_diff = zeros(N) # ⟨∇ϕ_i, ∇ϕ_{i+1}⟩μ on each of the [q_{i+1},q_{i+2}]
@@ -49,7 +49,7 @@ function calc_weights_periodic(mu::Function,D::Vector{Float64})
     return diag_weights_diff,off_diag_weights_diff,diag_weights,off_diag_weights
 end
 
-function calc_weights_schrodinger_periodic(W::Function, D::Vector{Float64})
+function calc_weights_schrodinger_periodic(W::Function, D::AbstractVector{Float64})
     N = length(D)-1 # D= [q_1, ... , q_{N}, q_{N+1}] with q_1 ≅ q_{N+1}
 
     diag_weights_diff = zeros(N) # ∫ ∇ϕ_i⋅∇ϕ_i on each of the [q_{i},q_{i+2}]
@@ -98,52 +98,29 @@ function calc_weights_schrodinger_periodic(W::Function, D::Vector{Float64})
     return diag_weights_diff, off_diag_weights_diff, diag_weights_pot, off_diag_weights_pot, diag_weights, off_diag_weights
 end
 
-function QSD_1D_FEM(mu::Function, β::Float64,Ωl::Float64,Ωr::Float64,N::Int64;weights=nothing) #requires Cubature and LinearAlgebra
-    Ω=collect(Float64,range(Ωl,Ωr,N+1))
+function QSD_1D_FEM(mu::Function, β::Float64,Ω::AbstractVector{Float64};weights=nothing) #requires Cubature and LinearAlgebra
+    N=length(Ω)-1
 
     if weights===nothing
-        diag_weights_diff, off_diag_weights_diff, diag_weights_pot, off_diag_weights_pot, diag_weights, off_diag_weights = calc_weights_periodic(mu,Ω)
+        diag_weights_diff,off_diag_weights_diff,diag_weights,off_diag_weights = calc_weights_periodic(mu,Ω)
     else
-        diag_weights_diff, off_diag_weights_diff, diag_weights_pot, off_diag_weights_pot, diag_weights, off_diag_weights = weights
+        diag_weights_diff,off_diag_weights_diff,diag_weights,off_diag_weights = weights
     end
 
-    M=zeros(N-2,N-2)
-    B=zeros(N-2,N-2)
+    M=zeros(N-1,N-1)
+    B=zeros(N-1,N-1)
 
-    for i=1:N-2 #diagonal terms
-        
-        f1(t) = mu(Ω[i] + t*(Ω[i+1]-Ω[i]))*t^2 # changes of variables for numerical stability
-        f2(t) = mu(Ω[i+1]+t*(Ω[i+2]-Ω[i+1]))*(1-t)^2 # for the ∫ϕi^2μ
-        
-        f3(t) = mu(Ω[i]+t*(Ω[i+1]-Ω[i]))
-        f4(t) = mu(Ω[i+1]+t*(Ω[i+2]-Ω[i+1]))
-
-        int_a,_ = hquadrature(f1,0,1)
-        int_b,_ = hquadrature(f2,0,1)
-
-        int_c,_=hquadrature(f4,0,1)
-        int_d,_ = hquadrature(f3,0,1)
-
-        B[i,i] = int_a *(Ω[i+1]-Ω[i]) + int_b * (Ω[i+2]-Ω[i+1])
-        M[i,i] = int_c / (Ω[i+1]-Ω[i]) + int_d / (Ω[i+2]-Ω[i+1])
-
+    for i=1:N-1 #diagonal terms
+        B[i,i] = diag_weights[2i-1] + diag_weights[2i]
+        M[i,i] = diag_weights_diff[i]
     end
 
-    for i=1:N-3 #off-diagonal terms
-        f1(t) = mu(Ω[i+1] + t*(Ω[i+2]-Ω[i+1]))*t*(1-t)
-        f2(t) = mu(Ω[i+1] +t*(Ω[i+2]-Ω[i+1]))
-
-        int_a,_ = hquadrature(f1,0,1)
-        int_b,_ = hquadrature(f2,0,1)
-
-
-        B[i,i+1] = B[i+1,i] = int_a *(Ω[i+2]-Ω[i+1])
-        M[i,i+1] = M[i+1,i] = -int_b / (Ω[i+2]-Ω[i+1])
-
+    for i=1:N-2 #off-diagonal terms
+        B[i,i+1] = B[i+1,i] = off_diag_weights[i]
+        M[i,i+1] = M[i+1,i] = off_diag_weights_diff[i]
     end
 
     M ./= β
-    # Note M has zero-sum rows, so that it actually is the generator of a discrete-state jump process
     M = Symmetric(M)
     B = Symmetric(B)
     
@@ -154,50 +131,29 @@ end
 
 QSD_1D_FEM(mu, β, domain::Tuple{Float64,Float64},N) = QSD_1D(mu,β,domain[1],domain[2],N)
 
-function QSD_1D_FEM_schrodinger(W::Function, β::Float64,Ωl::Float64,Ωr::Float64,N::Int64;weights=nothing)
-    mu(q)=exp(-β*V(q))
+function QSD_1D_FEM_schrodinger(W::Function, β::Float64,Ω::AbstractVector{Float64};weights=nothing)
 
-    Ω=collect(Float64,range(Ωl,Ωr,N+1))
-
+    N=length(Ω)-1
     if weights===nothing
         diag_weights_diff, off_diag_weights_diff, diag_weights_pot, off_diag_weights_pot, diag_weights, off_diag_weights = calc_weights_schrodinger_periodic(W,Ω)
     else
         diag_weights_diff, off_diag_weights_diff, diag_weights_pot, off_diag_weights_pot, diag_weights, off_diag_weights = weights
     end
 
-    # Compute M -- in fact we compute an unnormalized version of M, since we only care about ratios of eigenvalues
-    M=zeros(N-2,N-2)
-    B=zeros(N-2,N-2)
+    M=zeros(N-1,N-1)
+    B=zeros(N-1,N-1)
 
-    for i=1:N-2 #diagonal terms ∫Wϕi^2 +∫∇ϕi^2/β and ∫ϕi^2
-
-        #use change of variables for numerical stability
-        f(t) = W(Ω[i]+t*(Ω[i+1]-Ω[i]))*t^2
-        g(t) = W(Ω[i]+t*(Ω[i+2]-Ω[i+1]))*(1-t)^2
-
-        int_a,_ = hquadrature(f, 0,1) #∫Wϕi^2 between qi and qi+1 (up to a (qi+1-qi) factor)
-        int_b,_ = hquadrature(g, 0, 1) #Wϕi^2 between qi+1 and qi+2 (up to a (qi+2-qi+1) factor)
-
-        int_c = inv(Ω[i+1]-Ω[i]) + inv(Ω[i+2]-Ω[i+1]) #∫∇ϕi^2 between qi and qi+2
-
-        int_d = (Ω[i+2]-Ω[i])/3 #∫ϕi^2 between qi and qi+2
-
-        M[i,i] = int_a * (Ω[i+1]-Ω[i]) + int_b * (Ω[i+2]-Ω[i+1]) + int_c / β
-        B[i,i] = int_d
+    for i=1:N-1 
+        M[i,i] = diag_weights_pot[i] + diag_weights_diff[i] / β
+        B[i,i] = diag_weights[2i-1] + diag_weights[2i]
     end
 
-    for i=1:N-3 #off-diagonal terms
-        f(t) = W(Ω[i+1]+t*(Ω[i+2]-Ω[i+1]))*t*(1-t)
-        int_a,_ = hquadrature(f,0,1) #∫Wϕiϕi+1 between qi+1 and qi+2 (up to a factor)
-        int_b = - inv(Ω[i+2]-Ω[i+1]) #∫∇ϕi∇ϕi+1 between qi+1 and qi+2
-        int_c = (Ω[i+2]-Ω[i+1]) / 6 #∫ϕiϕi+1 between qi+1 and qi+2
-
-        M[i,i+1] = M[i+1,i] = int_a * (Ω[i+2]-Ω[i+1]) + int_b / β
-        B[i,i+1] = B[i+1,i] = int_c
+    for i=1:N-2 #off-diagonal terms
+        M[i,i+1] = M[i+1,i] = off_diag_weights_pot[i] + off_diag_weights_diff[i] / β
+        B[i,i+1] = B[i+1,i] = off_diag_weights[i]
 
     end
 
-    # Note M has zero-sum rows, so that it actually is the generator of a discrete-state jump process
     M = Symmetric(M)
     B = Symmetric(B)
     
@@ -216,28 +172,27 @@ Keyword argument: weights, optional. The result of calc_weights_periodic(V,β,D)
 function SQSD_1D_FEM(mu::Function,β::Float64,α::Vector{Float64}; weights = nothing)
 
     N=length(α)
-    D=collect(Float64,range(0,1,N+1))
-        #= 
-        Approximate the generator in weak form acting on the Sobolev space H_0^1(Ω) by a Galerkin approximation procedure.
-        This is done by computing the action of the bilinear form 
-                (u,v) -> ⟨ Lu,v ⟩μ = -1/β ⟨ ∇u, ∇v ⟩μ,
-        where the brackets ⟨⋅,⋅⟩μ denote μ-weighted inner products on Ω, 
-        on the (N-2)-dimensional subspace generated by the basis functions
-            ϕ_i(q)= (1- |q-qi|/h)⁺
-        Computing
-            Mij= 1/β ⟨ ∇ϕ_i, ∇ϕ_j ⟩μ,
-        this gives a symmetric positive-definite matrix whose first eigenvector is an approximation to the unnormalized QSD.
-        The coefficients Mij can be computed easily in terms of the 
-            μ([q_i,q_i+h]), 1 ≤ i ≤ N-1
-     =#
-
-     # Compute the weights, 
-     #       weights[i]= μ([q_i,q_i+h])
-
+    #= 
+    Approximate the generator in weak form acting on the Sobolev space H_0^1(Ω) by a Galerkin approximation procedure.
+    This is done by computing the action of the bilinear form 
+    (u,v) -> ⟨ Lu,v ⟩μ = -1/β ⟨ ∇u, ∇v ⟩μ,
+    where the brackets ⟨⋅,⋅⟩μ denote μ-weighted inner products on Ω, 
+    on the (N-2)-dimensional subspace generated by the basis functions
+    ϕ_i(q)= (1- |q-qi|/h)⁺
+    Computing
+    Mij= 1/β ⟨ ∇ϕ_i, ∇ϕ_j ⟩μ,
+    this gives a symmetric positive-definite matrix whose first eigenvector is an approximation to the unnormalized QSD.
+    The coefficients Mij can be computed easily in terms of the 
+    μ([q_i,q_i+h]), 1 ≤ i ≤ N-1
+    =#
+    
+    # Compute the weights, 
+    #       weights[i]= μ([q_i,q_i+h])
+    
     # Compute M -- in fact we compute an unnormalized version of M, since we only care about ratios of eigenvalues
-
+    
     if weights === nothing
-        diag_weights_diff,off_diag_weights_diff,diag_weights,off_diag_weights = calc_weights_periodic(mu,D)
+        diag_weights_diff,off_diag_weights_diff,diag_weights,off_diag_weights = calc_weights_periodic(mu,range(0,1,N+1))
     else
         diag_weights_diff,off_diag_weights_diff,diag_weights,off_diag_weights = weights
     end
@@ -285,7 +240,7 @@ function SQSD_1D_FEM_schrodinger(W::Function,β::Float64,α::Vector{Float64}; we
     N=length(α)
 
     if weights === nothing #assume the spatial domain is [0,1]
-        diag_weights_diff, off_diag_weights_diff, diag_weights_pot, off_diag_weights_pot, diag_weights, off_diag_weights=calc_weights_schrodinger_periodic(W,collect(Float64,range(0,1,N+1)))
+        diag_weights_diff, off_diag_weights_diff, diag_weights_pot, off_diag_weights_pot, diag_weights, off_diag_weights=calc_weights_schrodinger_periodic(W,range(0,1,N+1))
     else
         diag_weights_diff, off_diag_weights_diff, diag_weights_pot, off_diag_weights_pot, diag_weights, off_diag_weights=weights
     end
