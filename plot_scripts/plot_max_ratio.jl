@@ -4,7 +4,6 @@ using LinearAlgebra, Cubature#, Plots
 
 N=parse(Int64,ARGS[1])
 dβ=parse(Float64,ARGS[2])
-dh=parse(Float64,ARGS[3])
 
 include("../QSDs.jl")
 
@@ -17,13 +16,6 @@ saddle_points = [0.350482,0.649518]
 Ωl,Ωr=saddle_points
 
 domain=range(0,1,N+1)
-dh=1/N
-
-h0=-0.05
-hmax=first(saddle_points)
-hrange=h0:dh:hmax
-V_rel(h)=V(last(saddle_points)+h)
-V_rels=V_rel.(hrange)
 
 βrange=0:dβ:5
 
