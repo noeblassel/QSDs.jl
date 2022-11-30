@@ -37,6 +37,7 @@ hmax=first(saddle_points)
 if plot_mode
     fig_λ1= plot(xlabel="h",ylabel="λ1",legend=:topright)
     fig_gap=plot(xlabel="h",ylabel="λ2-λ1",legend=:topright)
+    fig_ratio=plot(xlabel="h",ylabel="(λ2-λ1)/λ1")
 end
 
 λ1s_classic=Float64[]
@@ -46,6 +47,8 @@ gaps_classic=Float64[]
 gaps_schrodinger=Float64[]
 
 hrange=h0:0.01:hmax
+V_rel(h)=V(last(saddle_points)+h)
+V_rels=V_rel.(hrange)
 
 for h=hrange
     println(h)
@@ -64,11 +67,18 @@ end
 
 if plot_mode
     plot!(fig_λ1,hrange,λ1s_classic,label="classic",linewidth=1,color=:red,linestyle=:dash)
+    plot!(twinx(fig_λ1),hrange,V_rels,linewidth=1,color=:black,linestyle=:dot,label="")
     plot!(fig_gap,hrange,gaps_classic,label="classic",linewidth=1,color=:red,linestyle=:dash)
+    plot!(twinx(fig_gap),hrange,V_rels,linewidth=1,color=:black,linestyle=:dot,label="")
+    plot!(fig_ratio,hrange,gaps_classic ./ λ1s_classic,label="classic",linewidth=1,color=:red,linestyle=:dash)
+    plot!(twinx(fig_ratio),hrange,V_rels,linewidth=1,color=:black,linestyle=:dot,label="")
 
     plot!(fig_λ1,hrange,λ1s_schrodinger,label="schrodinger",linewidth=1,color=:blue,linestyle=:dot)
     plot!(fig_gap,hrange,gaps_schrodinger,label="schrodinger",linewidth=1,color=:blue,linestyle=:dot)
+    plot!(fig_ratio,hrange,gaps_schrodinger ./ λ1s_schrodinger,label="schrodinger",linewidth=1,color=:blue,linestyle=:dot)
+
     savefig(plot(fig_λ1,fig_gap),"./figures/domain_lambdas_$β.pdf")
+    savefig(fig_ratio,"./figures/ratios_$β.pdf")
 else
     f=open("results_domain_lambdas.jl","w")
     println(f,"hs=[",join(hrange,","),"]")
