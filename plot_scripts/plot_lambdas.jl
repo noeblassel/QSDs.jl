@@ -21,7 +21,6 @@ V(q)=cos(6π*q) + cos(4π*q)/2
 dV(q)= -6π*sin(6π*q) -2π*sin(4π*q)
 d2V(q) = -36*π^2*cos(6π*q) - 8π^2*cos(4π*q)
 
-
 W(q) = (β*dV(q)^2/2-d2V(q))/2
 
 mu_tilde(q) = exp(-β * V(q))
@@ -31,9 +30,8 @@ mu(q) = mu_tilde(q) / Z
 saddle_points = [0.350482,0.649518]
 
 if plot_mode
-    fig_λ1= plot(xlabel="α",ylabel="λ1",xaxis=:log,yaxis=:log,legend=:bottomright)
+    fig_λ1= plot(xlabel="α",ylabel="1/λ1",xaxis=:log,yaxis=:log,legend=:topright)
     fig_gap=plot(xlabel="α",ylabel="λ2-λ1",xaxis=:log,yaxis=:log,legend=:topleft)
-
 end
 
 domain=collect(Float64,range(0,1,N+1))
@@ -77,10 +75,10 @@ for α= 10 .^ lg_alpha_range
 end
 
 if plot_mode
-    plot!(fig_λ1,10 .^ lg_alpha_range,λ1s_classic,label="classic",linewidth=1,color=:red,linestyle=:dash)
+    plot!(fig_λ1,10 .^ lg_alpha_range,inv.(λ1s_classic),label="classic",linewidth=1,color=:red,linestyle=:dash)
     plot!(fig_gap,10 .^ lg_alpha_range,gaps_classic,label="classic",linewidth=1,color=:red,linestyle=:dash)
 
-    plot!(fig_λ1,10 .^ lg_alpha_range,λ1s_schrodinger,label="schrodinger",linewidth=1,color=:blue,linestyle=:dot)
+    plot!(fig_λ1,10 .^ lg_alpha_range,inv.(λ1s_schrodinger),label="schrodinger",linewidth=1,color=:blue,linestyle=:dot)
     plot!(fig_gap,10 .^ lg_alpha_range,gaps_schrodinger,label="schrodinger",linewidth=1,color=:blue,linestyle=:dot)
     savefig(plot(fig_λ1,fig_gap),"./figures/lambdas_$β.pdf")
 else

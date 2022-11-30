@@ -1,8 +1,10 @@
 #!/libre/blasseln/julia-1.8.2/bin/julia
 
-using LinearAlgebra, Cubature, Plots
+using LinearAlgebra, Cubature#, Plots
 
 N=parse(Int64,ARGS[1])
+dβ=parse(Float64,ARGS[2])
+dh=parse(Float64,ARGS[3])
 
 include("../QSDs.jl")
 
@@ -15,11 +17,11 @@ saddle_points = [0.350482,0.649518]
 
 h0=-0.05
 hmax=first(saddle_points)
-hrange=h0:0.01:hmax
+hrange=h0:dh:hmax
 V_rel(h)=V(last(saddle_points)+h)
 V_rels=V_rel.(hrange)
 
-βrange=0:0.05:5
+βrange=0:dβ:5
 
 hstars_classic=Float64[]
 hstars_schrodinger=Float64[]
@@ -62,10 +64,16 @@ for β=βrange
     push!(hstars_schrodinger,hstar_schrodinger)
 end
 
+f=open("max_ratios.out","w")
+println(f,"βs=[",join(βrange,","),"]")
+println(f,"hstars_classic=[",join(hstars_classic,","),"]")
+println(f,"hstars_schrodinger=[",join(hstars_schrodinger,","),"]")
+close(f)
+#= 
 plot(xlabel="h*",ylabel="β")
 plot!(hstars_classic,βrange,linestyle=:dash,color=:red,label="classic")
 plot!(hstars_schrodinger,βrange,linestyle=:dot,color=:blue,label="schrodinger")
 
 plot!(twinx(),hrange,V_rels,label="",color=:black,linestyle=:dot)
 
-savefig("./figures/h_stars.pdf")
+savefig("./figures/h_stars.pdf") =#
