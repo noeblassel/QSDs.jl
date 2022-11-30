@@ -47,7 +47,7 @@ for β=βrange
     gaps_schrodinger=Float64[]
 
     for i=1:floor(Int64,N/2-1)
-        println("\t",h)
+        println("\t",i)
         λs_classic,_=QSD_1D_FEM(mu,β,domain[i:end-i+1];weights=trunc_weights_classic(i))
         λs_schrodinger,_=QSD_1D_FEM_schrodinger(W,β,domain[i:end-i+1];weights=trunc_weights_schrodinger(i))
 
