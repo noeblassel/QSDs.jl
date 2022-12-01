@@ -37,7 +37,7 @@ for β=βrange
     weights_schrodinger = calc_weights_schrodinger_periodic(W,domain)
     diag_weights_diff_schrodinger,off_diag_weights_diff_schrodinger,diag_weights_schrodinger,off_diag_weights_schrodinger = weights_schrodinger
 
-    trunc_weights_classic(i)=(weights_classic[1][i:end-i+1],weights_classic[2][i,end-i+1],weights_classic[3][2i-1,end-2i+2],weights_classic[4][i,end-i+1])
+    trunc_weights_classic(i)=(weights_classic[1][i:end-i+1],weights_classic[2][i:end-i+1],weights_classic[3][2i-1:end-2i+2],weights_classic[4][i:end-i+1])
     trunc_weights_schrodinger(i)=(weights_schrodinger[1][i:end-i+1],weights_schrodinger[2][i:end-i+1],weights_schrodinger[3][i:end-i+1],weights_schrodinger[4][i:end-i+1],weights_schrodinger[5][2i-1:end-2i+2],weights_schrodinger[6][i:end-i+1])
     
     λ1s_classic=Float64[]
@@ -68,6 +68,7 @@ for β=βrange
 
     push!(hstars_classic,hstar_classic)
     push!(hstars_schrodinger,hstar_schrodinger)
+    flush(stdout)
 end
 
 f=open("max_ratios.out","w")
