@@ -17,7 +17,7 @@ saddle_points = [0.350482,0.649518]
 
 domain=range(0,1,N+1)
 
-βrange=0:dβ:5
+βrange=dβ:dβ:5
 
 hstars_classic=Float64[]
 hstars_schrodinger=Float64[]
