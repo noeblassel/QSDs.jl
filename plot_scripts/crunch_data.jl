@@ -11,7 +11,7 @@ h1=parse(Float64,ARGS[5])
 h2=parse(Float64,ARGS[6])
 data_dir=ARGS[7]
 
-istart = (length(ARGS)>5) ? parse(Int64,ARGS[8]) : 100
+istart = (length(ARGS)>7) ? parse(Int64,ARGS[8]) : 100
 include("../QSDs.jl")
 include("../SplinePotentials.jl")
 
