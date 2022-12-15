@@ -77,7 +77,7 @@ for β=βrange
     #println(ratios_classic)
    # ratios_schrodinger = gaps_schrodinger ./ λ1s_schrodinger
     imax=argmax(ratios_classic)
-    hstar_classic=domain[imax]
+    hstar_classic=domain[istart+imax]
    # hstar_schrodinger=domain[argmax(ratios_schrodinger)]
     w_star=ws_classic[imax]
     push!(w_star,0.0)
