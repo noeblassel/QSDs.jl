@@ -9,12 +9,12 @@ h1=parse(Float64,ARGS[3])
 h2=parse(Float64,ARGS[4])
 output_file=ARGS[5]
 
-istart = (length(ARGS)>5) ? parse(Int64,ARGS[6]) : 10
+istart = (length(ARGS)>5) ? parse(Int64,ARGS[6]) : 100
 include("../QSDs.jl")
 include("../SplinePotentials.jl")
 
 critical_pts=[0.0,0.25,0.5,0.75,1.0-1/N]
-hmax=10.0 # height of potential barrier at boundary
+hmax=2.0 # height of potential barrier at boundary
 hbarrier=0.0 # height of potential barrier separating the two wells
 V,dV,d2V = SplinePotentials.spline_potential_derivatives(critical_pts,[hmax,-h1,hbarrier,-h2,hmax],1.0)
 
@@ -59,7 +59,7 @@ for β=βrange
 
     #gaps_schrodinger=Float64[]
 
-    for i=istart:N
+    for i=istart:length(domain)-istart
         #println("\t",i)
         λs_classic,us_classic=QSDs.QSD_1D_FEM(mu,β,domain[1:i];weights=trunc_weights_classic(i))
        # λs_schrodinger,_=QSD_1D_FEM_schrodinger(W,β,domain[i:end-i+1];weights=trunc_weights_schrodinger(i))

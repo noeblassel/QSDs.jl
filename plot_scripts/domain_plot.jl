@@ -83,7 +83,7 @@ if plot_mode
     plot!(fig_gap,10 .^ lg_alpha_range,gaps_schrodinger,label="schrodinger",linewidth=1,color=:blue,linestyle=:dot)
     savefig(plot(fig_λ1,fig_gap),"./figures/lambdas_cold.pdf")
 else
-    f=open("results_lambdas.jl","w")
+    f=open("domain_lambdas_$β.out","w")
     println(f,"αs=[",join(10 .^ lg_alpha_range,","),"]")
     println(f,"λ1s_classic=[",join(λ1s_classic,","),"]")
     println(f,"gaps_classic=[",join(gaps_classic,","),"]")
