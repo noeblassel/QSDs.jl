@@ -11,7 +11,7 @@ istart = parse(Int64,ARGS[6])
 iend = parse(Int64,ARGS[7])
 
 path = "/libre2/blasseln/QSD_data/dirichlet_data"
-
+include(joinpath(path,dir,"potential.out"))
 qs=Float64[]
 output_filename="extrema_$(dir).out"
 output_file=open(output_filename,"w")
