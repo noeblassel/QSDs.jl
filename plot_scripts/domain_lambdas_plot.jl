@@ -1,28 +1,23 @@
 #!/libre/blasseln/julia-1.8.2/bin/julia
 
-using Cubature, Plots
-
-mode=ARGS[1]
-N=parse(Int64,ARGS[2])
-β=parse(Float64,ARGS[3])
-h1=parse(Float64,ARGS[4])
-h2=parse(Float64,ARGS[5])
-
-istart = (length(ARGS)>5) ? parse(Int64,ARGS[6]) : 10
-
-if mode=="plot"
-    plot_mode=true
-else
-    plot_mode=false
-end
-
-if plot_mode
-    using Plots
-end
-include("../QSDs.jl")
+using Plots
 include("../SplinePotentials.jl")
+data_dir=ARGS[1]
+fig_dir=ARGS[2]
 
-#= V(q)=cos(6π*q) + cos(4π*q)/2
+include(joinpath(data_dir,"potential.out"))
+V,dV,d2V=SplinePotentials.spline_potential_derivatives(critical_pts,potential_heights,1.0)
+
+
+data_file_regex=r"eigen_β(\d+\.\d+)_N(\d+)\.out"
+eig_filenames = [f for f in readdir(data_dir) if occursin(data_file_regex,f)]
+
+for f in eig_filenames
+    fig_λ1= plot(xlabel="h",ylabel="λ1",legend=:topright)
+    fig_gap=plot(xlabel="h",ylabel="λ2-λ1",legend=:topright)
+    fig_ratio=plot(xlabel="h",ylabel="(λ2-λ1)/λ1")
+end
+#= #= V(q)=cos(6π*q) + cos(4π*q)/2
 dV(q)= -6π*sin(6π*q) -2π*sin(4π*q)
 d2V(q) = -36*π^2*cos(6π*q) - 8π^2*cos(4π*q) =#
 critical_pts=[0.0,0.25,0.5,0.75,1.0-1/N]
@@ -99,4 +94,4 @@ else
     println(f,"λ1s_schrodinger=[",join(λ1s_schrodinger,","),"]")
     println(f,"gaps_schrodinger=[",join(gaps_schrodinger,","),"]")
     close(f)
-end
+end =#
