@@ -34,5 +34,5 @@ end
 output_file=open(output_filename,"w")
 println(output_file,"β ix argmins mins argmaxs maxs")
 close(output_file)
-run(`cat extrema_thread*.out >> output_filename`)
-run(`rm extrema_thread*.out`)
+run(`cat extrema_thread* >> output_filename`)
+run(`rm extrema_thread*`)
