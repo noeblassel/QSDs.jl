@@ -13,7 +13,7 @@ path = "/libre2/blasseln/QSD_data/dirichlet_data"
 include(joinpath(path,dir,"potential.out"))
 qs=Float64[]
 output_filename="extrema_$(dir).out"
-files_threaded = [open("extrema_thread_$(id).out") for id=1:nthreads()]
+files_threaded = [open("extrema_thread_$(id).out","w") for id=1:nthreads()]
 
 @showprogress for β=βmin:dβ:βmax
     @threads for ix=istart:iend
