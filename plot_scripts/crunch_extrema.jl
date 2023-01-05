@@ -19,7 +19,7 @@ for β=βmin:dβ:βmax
     println(β)
     @threads for ix=istart:iend
         lines=readlines(joinpath(path,dir,"beta$(β)_N$(N)_ix$(ix).out"))
-
+        println(last(lines))
         qsd = split(match(r"qsd=[(.)+]",last(lines)),',')
         qsd=parse.(Float64, qsd)
 
