@@ -14,9 +14,9 @@ include(joinpath(path,dir,"potential.out"))
 output_filename="extrema_$(dir).out"
 files_threaded = [open("extrema_thread_$(id).out","w") for id=1:nthreads()]
 
-for β=βmin:dβ:βmax
+@threads for β=βmin:dβ:βmax
     println(β)
-    @threads for ix=istart:iend
+    for ix=istart:iend
         lines=readlines(joinpath(path,dir,"beta$(β)_N$(N)_ix$(ix).out"))
         qsd=parse.(Float64,split(match(r"qsd=\[(.+)\]",last(lines))[1],","))
 
