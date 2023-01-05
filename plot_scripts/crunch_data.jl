@@ -44,6 +44,8 @@ for β=βrange
     λ1s_classic=Float64[]
     gaps_classic=Float64[]
 
+    mus = mu.(domain)
+
     for i=istart:length(domain)-istart
         λs_classic,us_classic=QSDs.QSD_1D_FEM(mu,β,domain[1:i];weights=trunc_weights_classic(i))
         
@@ -54,6 +56,7 @@ for β=βrange
         qsd=us_classic[:,1]
         push!(qsd,0)
         pushfirst!(qsd,0)
+        qsd .*= mus[1:i]
         qsd /=sum(qsd)*inv(N)
 
         f=open(joinpath(data_dir,"beta$(β)_N$(N)_ix$(i).out"),"w")
