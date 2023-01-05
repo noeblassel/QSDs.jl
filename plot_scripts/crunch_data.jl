@@ -48,7 +48,7 @@ for β=βrange
 
     mus = mu.(domain)
 
-    for i=istart:length(domain)
+    for i=istart:N-1
         λs_classic,us_classic=QSDs.QSD_1D_FEM(mu,β,domain[1:i];weights=trunc_weights_classic(i))
         
         λ1,λ2=λs_classic
