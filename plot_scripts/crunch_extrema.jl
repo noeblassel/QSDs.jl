@@ -15,7 +15,8 @@ qs=Float64[]
 output_filename="extrema_$(dir).out"
 files_threaded = [open("extrema_thread_$(id).out","w") for id=1:nthreads()]
 
-@showprogress for β=βmin:dβ:βmax
+for β=βmin:dβ:βmax
+    println(β)
     @threads for ix=istart:iend
         include(joinpath(path,dir,"beta$(β)_N$(N)_ix$(ix).out"))
         min_ixs = [i for i=2:length(qsd)-1 if (qsd[i]< qsd[i-1])&&(qsd[i]<qsd[i+1])]
