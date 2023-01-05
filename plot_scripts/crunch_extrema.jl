@@ -1,6 +1,6 @@
 #!/libre/blasseln/julia-1.8.2/bin/julia
 
-using ProgressMeter
+using Threads
 
 
 println("Usage: dir βmin dβ βmax N istart iend")
@@ -14,20 +14,24 @@ path = "/libre2/blasseln/QSD_data/dirichlet_data"
 include(joinpath(path,dir,"potential.out"))
 qs=Float64[]
 output_filename="extrema_$(dir).out"
-output_file=open(output_filename,"w")
-println(output_file,"β ix argmins mins argmaxs maxs")
+files_threaded = [open("extrema_thread_$(id).out") for id=1:nthreads()]
+
 @showprogress for β=βmin:dβ:βmax
-    @showprogress for ix=istart:iend
+    @threads for ix=istart:iend
         include(joinpath(path,dir,"beta$(β)_N$(N)_ix$(ix).out"))
         min_ixs = [i for i=2:length(qsd)-1 if (qsd[i]< qsd[i-1])&&(qsd[i]<qsd[i+1])]
         argmins = domain[min_ixs]
         mins = qsd[min_ixs]
-
+        
         max_ixs = [i for i=2:length(qsd)-1 if (qsd[i] > qsd[i-1])&&(qsd[i] > qsd[i+1])]
         argmaxs = domain[max_ixs]
         maxs = qsd[max_ixs]
-
-        println(output_file, "$(β) $(ix) $(argmins) $(mins) $(argmaxs) $(maxs)")
+        
+        println(files_threaded[threadid()], "$(β) $(ix) $(argmins) $(mins) $(argmaxs) $(maxs)")
     end
 end
+output_file=open(output_filename,"w")
+println(output_file,"β ix argmins mins argmaxs maxs")
 close(output_file)
+run(`cat extrema_thread*.out >> output_filename`)
+run(`rm extrema_thread*.out`)
