@@ -20,6 +20,8 @@ hmax=2.0 # height of potential barrier at boundary
 hbarrier=0.0 # height of potential barrier separating the two wells
 V,dV,d2V = SplinePotentials.spline_potential_derivatives(critical_pts,[hmax,-h1,hbarrier,-h2,hmax],1.0)
 
+(!isdir(data_dir)) && mkdir(data_dir)
+
 domain=range(0,1,N+1)
 
 f=open(joinpath(data_dir,"potential.out"),"w")
