@@ -1,7 +1,6 @@
 #!/libre/blasseln/julia-1.8.2/bin/julia
 
-using Threads
-
+using Base.Threads
 
 println("Usage: dir βmin dβ βmax N istart iend")
 dir = ARGS[1]
