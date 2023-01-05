@@ -11,7 +11,6 @@ iend = parse(Int64,ARGS[7])
 
 path = "/libre2/blasseln/QSD_data/dirichlet_data"
 include(joinpath(path,dir,"potential.out"))
-qs=Float64[]
 output_filename="extrema_$(dir).out"
 files_threaded = [open("extrema_thread_$(id).out","w") for id=1:nthreads()]
 
@@ -19,9 +18,7 @@ for β=βmin:dβ:βmax
     println(β)
     @threads for ix=istart:iend
         lines=readlines(joinpath(path,dir,"beta$(β)_N$(N)_ix$(ix).out"))
-        println(last(lines))
-        qsd = split(match(r"qsd=[(.)+]",last(lines)),',')
-        qsd=parse.(Float64, qsd)
+        qsd=parse.(Float64, split(match(r"qsd=[(.)+]",last(lines))[1],','))
 
         min_ixs = [i for i=2:length(qsd)-1 if (qsd[i]< qsd[i-1])&&(qsd[i]<qsd[i+1])]
         argmins = domain[min_ixs]
