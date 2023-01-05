@@ -19,7 +19,7 @@ for β=βmin:dβ:βmax
     @threads for ix=istart:iend
         lines=readlines(joinpath(path,dir,"beta$(β)_N$(N)_ix$(ix).out"))
 
-        qsd=parse.(Float64, split(match(r"qsd=\[(.)+\]",last(lines))[1],','))
+        qsd=parse.(Float64, split(match(r"qsd=\[(.)+\]",last(lines))[1],","))
         println(qsd)
         min_ixs = [i for i=2:length(qsd)-1 if (qsd[i]< qsd[i-1])&&(qsd[i]<qsd[i+1])]
         argmins = domain[min_ixs]
