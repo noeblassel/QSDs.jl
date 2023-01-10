@@ -19,7 +19,7 @@ maxs_threaded = [zero(βrange) for i=1:nthreads()]
 
 @threads for (i,β)=enumerate(βrange)
     lines=readlines(joinpath(path,dir,"eigen_β$(β)_N$(N).out"))
-    ratios = parse.(Float64,split(match(r"ratios=\[(.+)\]",last(lines),","))
+    ratios = parse.(Float64,split(match(r"ratios=\[(.+)\]",last(lines),",")))
     imax = argmax(ratios)
     argmaxs_threaded[threadid()][i] = domain[istart + imax]
     maxs_threaded[threadid()][i] = maximum(ratios)
