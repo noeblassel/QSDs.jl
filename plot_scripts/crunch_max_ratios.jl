@@ -7,6 +7,7 @@ dir = ARGS[1]
 βmin,dβ,βmax = parse.(Float64,ARGS[2:4])
 N = parse(Int64,ARGS[5])
 istart = parse(Int64,ARGS[6])
+iend = parse(Int64,ARGS[7])
 
 include(joinpath(path,dir,"potential.out"))
 
