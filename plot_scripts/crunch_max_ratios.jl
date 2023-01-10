@@ -2,7 +2,7 @@
 
 path = "/libre2/blasseln/QSD_data/dirichlet_data"
 
-println("Usage: dir βmin dβ βmax N istart")
+println("Usage: dir βmin dβ βmax N istart iend")
 dir = ARGS[1]
 βmin,dβ,βmax = parse.(Float64,ARGS[2:4])
 N = parse(Int64,ARGS[5])
@@ -18,7 +18,7 @@ maxs = zero(argmaxs)
 for (i,β)=enumerate(βrange)
     lines=readlines(joinpath(path,dir,"eigen_β$(β)_N$(N).out"))
     ratios = parse.(Float64,split(match(r"ratios=\[(.+)\]",last(lines))[1],","))
-    imax = argmax(ratios)
+    imax = argmax(ratios[1:iend-istart])
     argmaxs[i] = domain[istart + imax]
     maxs[i] = maximum(ratios)
 end
