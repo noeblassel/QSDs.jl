@@ -17,7 +17,7 @@ maxs = zero(argmaxs)
 
 for (i,β)=enumerate(βrange)
     lines=readlines(joinpath(path,dir,"eigen_β$(β)_N$(N).out"))
-    ratios = parse.(Float64,split(match(r"ratios=\[(.+)\]",last(lines)),","))
+    ratios = parse.(Float64,split(match(r"ratios=\[(.+)\]",last(lines))[1],","))
     imax = argmax(ratios)
     argmaxs[i] = domain[istart + imax]
     maxs[i] = maximum(ratios)
