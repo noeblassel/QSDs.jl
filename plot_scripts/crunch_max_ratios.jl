@@ -1,4 +1,4 @@
-#!/libre/blasseln/julia-1.8.2/bin/julia
+#!/libre/blasseln/julia-1.8.2/bin/julia 
 
 path = "/libre2/blasseln/QSD_data/dirichlet_data"
 
@@ -17,7 +17,7 @@ maxs = zero(argmaxs)
 
 for (i,β)=enumerate(βrange)
     lines=readlines(joinpath(path,dir,"eigen_β$(β)_N$(N).out"))
-    ratios = parse.(Float64,split(match(r"ratios=\[(.+)\]",last(lines),",")))
+    ratios = parse.(Float64,split(match(r"ratios=\[(.+)\]",last(lines)),","))
     imax = argmax(ratios)
     argmaxs[i] = domain[istart + imax]
     maxs[i] = maximum(ratios)
