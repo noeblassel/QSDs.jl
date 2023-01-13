@@ -20,6 +20,7 @@ for β=βmin:dβ:βmax
     r_normal_derivative_u2=Float64[]
 
     for ix = ix_start:ix_end
+        println("\t",ix)
         include(joinpath("/libre2/blasseln/QSD_data/dirichlet_data",dir,"beta$(β)_N$(N)_ix$(ix).out"))
         u1 = us[:,1]
         u2 = us[:,2]
@@ -33,7 +34,7 @@ for β=βmin:dβ:βmax
         push!(r_normal_derivative_u2,(u2[n-1]-u2[n])/h)
     end
 
-    output_file = open(joinpath(output_dir,"$(output_file_prefix)_normal_derivatives_β$(β)_$(dir).out"),"w")
+    output_file = open(joinpath(output_dir,"$(output_file_prefix)_normal_derivatives_β$(β)_$(dir).out"),"w  ")
     println(output_file,"l_normal_derivative_u1=",l_normal_derivative_u1)
     println(output_file,"r_normal_derivative_u1=",r_normal_derivative_u1)
     println(output_file,"l_normal_derivative_u2=",l_normal_derivative_u2)
