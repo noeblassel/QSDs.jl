@@ -33,11 +33,11 @@ for β=βmin:dβ:βmax
 
          n = length(u1)
 
-        push!(l_normal_derivative_u1,(u1[2]-u1[1])/h)
-        push!(r_normal_derivative_u1,(u1[n-1]-u1[n])/h)
+        push!(l_normal_derivative_u1,u1[1]/h)
+        push!(r_normal_derivative_u1,u1[n]/h)
 
-        push!(l_normal_derivative_u2,(u2[2]-u2[1])/h)
-        push!(r_normal_derivative_u2,(u2[n-1]-u2[n])/h)
+        push!(l_normal_derivative_u2,u2[1]/h)
+        push!(r_normal_derivative_u2,u2[n]/h)
 
         push!(λ1s,first(λs))
         push!(λ2s,last(λs))
