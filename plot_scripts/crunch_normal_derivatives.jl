@@ -24,8 +24,11 @@ for β=βmin:dβ:βmax
         include(joinpath("/libre2/blasseln/QSD_data/dirichlet_data",dir,"beta$(β)_N$(N)_ix$(ix).out"))
         u1 = us[:,1]
         u2 = us[:,2]
-
-        n = length(u1)
+        
+        (u1[5] <= 0 ) && (u1 = -u1)
+        (u2[5] <= 0) && (u2 = -u2)
+        
+         n = length(u1)
 
         push!(l_normal_derivative_u1,(u1[2]-u1[1])/h)
         push!(r_normal_derivative_u1,(u1[n-1]-u1[n])/h)
