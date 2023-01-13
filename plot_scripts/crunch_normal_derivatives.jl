@@ -33,7 +33,7 @@ for β=βmin:dβ:βmax
         push!(r_normal_derivative_u2,(u2[n-1]-u2[n])/h)
     end
 
-    output_file = open(joinpath(output_dir,"$(output_file_prefix)_normal_derivatives_β$(β)_$(dir).out"))
+    output_file = open(joinpath(output_dir,"$(output_file_prefix)_normal_derivatives_β$(β)_$(dir).out"),"w")
     println(output_file,"l_normal_derivative_u1=",l_normal_derivative_u1)
     println(output_file,"r_normal_derivative_u1=",r_normal_derivative_u1)
     println(output_file,"l_normal_derivative_u2=",l_normal_derivative_u2)
