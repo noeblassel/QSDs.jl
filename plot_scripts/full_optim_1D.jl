@@ -2,24 +2,32 @@
 
 using LinearAlgebra, Cubature#, Plots
 
-println("usage: N β well_depth_A well_depth_B output_file Δix")
+println("usage: N β l_well_depth well_depth r_well_depth l_coreset r_coreset min_dim output_file progress_log_file")
+
 N=parse(Int64,ARGS[1])
 β=parse(Float64,ARGS[2])
-h1=parse(Float64,ARGS[3])
-h2=parse(Float64,ARGS[4])
-output_file=ARGS[5]
-Δix = parse(Int64,ARGS[6])
+
+l_well_depth=parse(Float64,ARGS[3])
+well_depth = parse(Float64,ARGS[4])
+r_well_depth=parse(Float64,ARGS[5])
+
+l_coreset=parse(Float64,ARGS[6])
+r_coreset=parse(Float64,ARGS[7])
+
+min_dim = parse(Int64,ARGS[8])
+
+output_file=ARGS[9]
+progress_log_file = ARGS[10]
 
 include("../QSDs.jl")
 include("../SplinePotentials.jl")
+-
+critical_pts=[0.0,l_coreset,(0.5+l_coreset)/2,0.5,(0.5+r_coreset)/2,r_coreset,1-1/N]
+potential_heights = [0.0,-l_well_depth,0.0,-well_depth,0.0,-r_well_depth,0.0]
+V,dV,d2V = SplinePotentials.spline_potential_derivatives(critical_pts,potential_heights,1.0)
 
-critical_pts=[0.0,0.25,0.5,0.75,1.0-1/N]
-hmax=2.0 # height of potential barrier at boundary
-hbarrier=0.0 # height of potential barrier separating the two wells
-V,dV,d2V = SplinePotentials.spline_potential_derivatives(critical_pts,[hmax,-h1,hbarrier,-h2,hmax],1.0)
 
-
-domain=range(0,1,N+1)
+domain=range(l_coreset,r_coreset,N+1)
 
 mu_tilde(q) = exp(-β * V(q))
 Z,_ = hquadrature(mu_tilde,0,1)
@@ -30,28 +38,22 @@ weights_classic = QSDs.calc_weights_periodic(mu,domain)
 diag_weights_diff_classic,off_diag_weights_diff_classic,diag_weights_classic,off_diag_weights_classic = weights_classic
 
 slice_weights_classic(i,j)=(weights_classic[1][i:j],weights_classic[2][i:j],weights_classic[3][2i-1:2j],weights_classic[4][i:j]) # a slice of weights
-ix_range = 1:Δix:N
-L = length(ix_range)
 
-λ1s = zeros(L,L)
-λ2s = zeros(L,L)
+λ1s = zeros(N,N)
+λ2s = zeros(N,N)
 
-l_normal_derivative_u1 = zeros(L,L)
-r_normal_derivative_u1 = zeros(L,L)
+l_normal_derivative_u1 = zeros(N,N)
+r_normal_derivative_u1 = zeros(N,N)
 
-l_normal_derivative_u2 = zeros(L,L)
-r_normal_derivative_u2 = zeros(L,L)
+l_normal_derivative_u2 = zeros(N,N)
+r_normal_derivative_u2 = zeros(N,N)
 
 h=1/N
 
-for i=1:L-1
-    println(i)
-    for j=i+1:L
-        println("\t",j)
-        ix_a = ix_range[i]
-        ix_b = ix_range[j]
+for i=1:N-min_dim
+    for j=i+min_dim:N
 
-        λs,us=QSDs.QSD_1D_FEM(mu,β,domain[ix_a:ix_b];weights=slice_weights_classic(ix_a,ix_b))
+        λs,us=QSDs.QSD_1D_FEM(mu,β,domain[i:j];weights=slice_weights_classic(i,j))
         
 
         λ1s[i,j] = first(λs)
@@ -60,15 +62,18 @@ for i=1:L-1
         u1=us[:,1]
         u2=us[:,2]
 
-        (u1[5] <= 0 ) && (u1 = -u1)
-        (u2[5] <= 0) && (u2 = -u2)
+        (u1[1] <= 0 ) && (u1 = -u1)
+        (u2[1] <= 0) && (u2 = -u2)
 
-        l_normal_derivative_u1[i,j]=(u1[2]-u1[1])/h
-        r_normal_derivative_u1[i,j]=(u1[end-1]-u1[end])/h
+        l_normal_derivative_u1[i,j]=(-u1[1])
+        r_normal_derivative_u1[i,j]=(u1[end])
 
-        l_normal_derivative_u2[i,j]=(u2[2]-u2[1])/h
-        r_normal_derivative_u2[i,j]=(u2[end-1]-u2[end])/h
+        l_normal_derivative_u2[i,j]=(-u2[1])
+        r_normal_derivative_u2[i,j]=(u2[end])
     end
+    f= open(progress_log_file,"w")
+    println(f,"$(round(100*i/(N-min_dim),digits=2))% done")
+    close(f)
 end
 
 f=open(output_file,"w")
