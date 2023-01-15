@@ -2,7 +2,7 @@
 
 using LinearAlgebra, Cubature#, Plots
 
-println("usage: N β l_well_depth well_depth r_well_depth l_coreset r_coreset min_dim output_file progress_log_file")
+println("usage: N β l_well_depth well_depth r_well_depth l_coreset r_coreset min_dim output_file_prefix progress_log_file")
 
 N=parse(Int64,ARGS[1])
 β=parse(Float64,ARGS[2])
@@ -16,7 +16,7 @@ r_coreset=parse(Float64,ARGS[7])
 
 min_dim = parse(Int64,ARGS[8])
 
-output_file=ARGS[9]
+output_file_prefix=ARGS[9]
 progress_log_file = ARGS[10]
 
 include("../QSDs.jl")
@@ -76,7 +76,7 @@ for i=1:N-min_dim
     close(f)
 end
 
-f=open(output_file,"w")
+f=open("$(output_file_prefix)_β$(β)_N$(N)_$(l_well_depth)_$(well_depth)_$(r_well_depth).out","w")
 println(f,"l_normal_derivative_u1=",l_normal_derivative_u1)
 println(f,"r_normal_derivative_u1=",r_normal_derivative_u1)
 println(f,"l_normal_derivative_u2=",l_normal_derivative_u2)
