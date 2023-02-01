@@ -6,7 +6,7 @@ export calc_weights_periodic,
         SQSD_1D_FEM,
         SQSD_1D_FEM_schrodinger
 
-    using Cubature, LinearAlgebra
+    using Cubature, LinearAlgebra, SparseArrays, Arpack, TensorOperations
 
     """
     Precompute weights for the M and δM matrices in the SQSD_1D_FEM function, to avoid redudant quadrature calculations.
@@ -137,6 +137,88 @@ export calc_weights_periodic,
 
         return λs[1:2],us[:,1:2]
     end
+
+    """ 
+    Build FEM matrices associated with the generator of the Overdamped Langevin dynamics on the periodic domain with piecewise constant killing rate α on each cell. 
+    Domain is an abstract vector [q_1,…, q_{N+1}] where q_{N+1} and q_1 are identified with each other.
+    """
+    function build_FEM_matrices_1D(V::Function,β::S,domain::AbstractVector{T}) where {S<:Real,T<:Real,U<:Real}
+        N=length(domain)-1
+
+        M=zeros(N,N)
+        B=zeros(N,N)
+
+        mus = exp.(-β*V.(domain))
+    
+        for i=1:N-1
+            M[i,i] = inv(2β*(domain[i+1]-domain[i]))*(mus[i]+mus[i+1]) + inv(2β*(domain[i+2]-domain[i+1]))*(mus[i+1]+mus[i+2])
+            B[i,i] = (domain[i+1]-domain[i])*(mus[i]/12+mus[i+1]/4) + (domain[i+2]-domain[i+1])*(mus[i+1]/4+mus[i+2]/12)
+
+            M[i,i+1] = M[i+1,i] = -inv(2β*(domain[i+2]-domain[i+1]))*(mus[i+1]+mus[i+2])
+            B[i,i+1] = B[i+1,i] = (domain[i+2]-domain[i+1])*(mus[i+1]+mus[i+2])/12
+        end
+    
+        #boundary terms
+        M[N,N] = inv(2β*(domain[N+1]-domain[N]))*(mus[N]+mus[N+1]) + inv(2β*(domain[2]-domain[1]))*(mus[1]+mus[2])
+        B[N,N] = (domain[N+1]-domain[N])*(mus[N]/12 +mus[N+1]/4) + (domain[2]-domain[1])*(mus[1]/4 +mus[2]/12)
+        M[1,N] = M[N,1] = -inv(2β*(domain[2]-domain[1]))*(mus[1]+mus[2])
+        B[1,N] = B[N,1] = (domain[2]-domain[1])*(mus[1]+mus[2])/12
+
+
+
+        #Mᵢⱼ = β⁻¹∫∇ϕᵢ⋅∇ϕⱼ dμ + ∫ϕᵢϕⱼα dμ
+        #Bᵢⱼ = ∫ϕᵢϕⱼ dμ 
+
+        M = Symmetric(M)
+        B = Symmetric(B)
+
+        function δM(α)
+            ΔM = zeros(N,N)
+            for i=1:N-1
+                ΔM[i,i] = α[i]*(domain[i+1]-domain[i])*(mus[i]/12+mus[i+1]/4) + α[i+1]*(domain[i+2]-domain[i+1])*(mus[i+1]/4+mus[i+2]/12)
+                ΔM[i,i+1] = ΔM[i+1,i] = α[i+1]*(domain[i+2]-domain[i+1])*(mus[i+1]+mus[i+2])/12
+            end
+            ΔM[N,N] = α[N]*(domain[N+1]-domain[N])*(mus[N]/12 +mus[N+1]/4) + α[1]*(domain[2]-domain[1])*(mus[1]/4 +mus[2]/12)
+            ΔM[1,N] = ΔM[N,1] = α[1]*(domain[2]-domain[1])*(mus[1]+mus[2])/12
+            return Symmetric(ΔM)
+        end
+
+        return M,B,δM
+    end
+
+
+    """
+    Returns λ1,λ2 and associated gradients with respect to a soft killing rate α
+
+    M,B, diag_weights, off_diag_weights should be the return values of `build_FEM_matrices_1D`.
+    α is the vector of soft killing rates on the cells of the mesh. α must be of size N, 
+    Ω_indices correspond to the indices of vertices inside the domain (where α is finite). 
+    """
+    function calc_soft_killing_grads(M,B,δM,α,Ω_indices::AbstractVector{T}) where {T<:Integer}
+        ∇1α=zero(α) # gradient of λ1 wrt α
+        ∇2α=zero(α) # gradient of λ2 wrt α
+
+        ΔM_dirichlet = δM(α)[Ω_indices,Ω_indices]
+        L_dirichlet = M[Ω_indices,Ω_indices] + ΔM_dirichlet
+        B_dirichlet = B[Ω_indices,Ω_indices]
+
+        λs,us = eigen(L_dirichlet,B_dirichlet)
+        u1=us[:,1]
+        u2=us[:,2]
+
+        ∇1α=transpose(u1)*ΔM_dirichlet*u1
+        ∇2α=transpose(u2)*ΔM_dirichlet*u2
+
+        return ∇1α,∇2α
+
+    end
+
+    function build_FEM_schrodinger_1D(V::Function,β::S,domain::AbstractVector{T}) where {S<:Real,T<:Real}
+        N=length(domain)-1
+        M=zeros(N,N)
+        B=zeros(N,N)
+    end
+
 
     function QSD_1D_FEM_schrodinger(W::Function, β::Float64,Ω::AbstractVector{Float64};weights=nothing , precond=nothing)
 
