@@ -4,7 +4,8 @@ export calc_weights_periodic,
         QSD_1D_FEM,
         QSD_1D_FEM_schrodinger,
         SQSD_1D_FEM,
-        SQSD_1D_FEM_schrodinger
+        SQSD_1D_FEM_schrodinger,
+        build_FEM_matrices_1D
 
     using Cubature, LinearAlgebra, SparseArrays, Arpack, TensorOperations
 
@@ -183,7 +184,26 @@ export calc_weights_periodic,
             return Symmetric(ΔM)
         end
 
-        return M,B,δM
+
+        """
+        Derivative of a soft-killing operator eigenvalue with respect to a component of the soft killing rate. 
+        The index ix of this component should refer to the killing rate on the ix-th cell of the full mesh.
+        In the case of Dirichlet boundary condition, u should be extended with zeros adequately to match the dimensionality of the full periodic FEM generator.
+        """
+        function ∂λ(α,u,ix)
+            if ix>1
+                return u[ix]^2 * (domain[ix+1]-domain[ix])*(mus[ix]/12+mus[ix+1]/4) +
+                u[ix-1]^2 * (domain[ix+1]-domain[ix])*(mus[ix]/4+mus[ix+1]/12) +
+                2*u[ix]*u[ix-1]*(domain[ix+1]-domain[ix])*(mus[ix]+mus[ix+1])/12
+            else
+                return u[1]^2 * (domain[2]-domain[1])*(mus[1]/12+mus[2]/4) +
+                u[N]^2 * (domain[2]-domain[1])*(mus[1]/4+mus[2]/12) +
+                2*u[N]*u[1]*(domain[2]-domain[1])*(mus[1]+mus[2])/12
+            end
+
+        end
+
+        return M,B,δM,∂λ
     end
 
 
@@ -191,25 +211,33 @@ export calc_weights_periodic,
     Returns λ1,λ2 and associated gradients with respect to a soft killing rate α
 
     M,B, diag_weights, off_diag_weights should be the return values of `build_FEM_matrices_1D`.
-    α is the vector of soft killing rates on the cells of the mesh. α must be of size N, 
+    log_α is the vector of soft log killing rates on the cells of the mesh 
+    This is easier to optimize, while avoiding negative values of α. α must be of size N, 
     Ω_indices correspond to the indices of vertices inside the domain (where α is finite). 
     """
-    function calc_soft_killing_grads(M,B,δM,α,Ω_indices::AbstractVector{T}) where {T<:Integer}
-        ∇1α=zero(α) # gradient of λ1 wrt α
-        ∇2α=zero(α) # gradient of λ2 wrt α
+    function calc_soft_killing_grads(M,B,δM,∂λ,log_α,Ω_indices::AbstractVector{T}) where {T<:Integer}
 
+        N = first(size(M))
+        α = exp.(log_α)
         ΔM_dirichlet = δM(α)[Ω_indices,Ω_indices]
-        L_dirichlet = M[Ω_indices,Ω_indices] + ΔM_dirichlet
+        M_dirichlet = M[Ω_indices,Ω_indices] + ΔM_dirichlet
         B_dirichlet = B[Ω_indices,Ω_indices]
 
-        λs,us = eigen(L_dirichlet,B_dirichlet)
-        u1=us[:,1]
-        u2=us[:,2]
+        λs,us = eigen(M_dirichlet,B_dirichlet)
+        u1_dirichlet = us[:,1]
+        u2_dirichlet = us[:,2]
+        λ1,λ2 = λs[1:2]
 
-        ∇1α=transpose(u1)*ΔM_dirichlet*u1
-        ∇2α=transpose(u2)*ΔM_dirichlet*u2
+        u1 = zeros(N)
+        u2 = zeros(N)
 
-        return ∇1α,∇2α
+        u1[Ω_indices] .= u1_dirichlet
+        u2[Ω_indices] .= u2_dirichlet
+
+        ∇λ1 = α .* [∂λ(α,u1,ix) for ix=1:N]
+        ∇λ2 = α .* [∂λ(α,u2,ix) for ix=1:N]
+
+        return u1,u2,λ1,λ2,∇λ1,∇λ2
 
     end
 
