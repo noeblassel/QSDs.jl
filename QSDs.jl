@@ -5,9 +5,11 @@ export calc_weights_periodic,
         QSD_1D_FEM_schrodinger,
         SQSD_1D_FEM,
         SQSD_1D_FEM_schrodinger,
-        build_FEM_matrices_1D
+        build_FEM_matrices_1D_PBC,
+        build_FEM_matrices_1D_Neumann,
+        soft_killing_grads
 
-    using Cubature, LinearAlgebra, SparseArrays, Arpack, TensorOperations
+    using Cubature, LinearAlgebra, Triangulate
 
     """
     Precompute weights for the M and δM matrices in the SQSD_1D_FEM function, to avoid redudant quadrature calculations.
@@ -140,10 +142,11 @@ export calc_weights_periodic,
     end
 
     """ 
-    Build FEM matrices associated with the generator of the Overdamped Langevin dynamics on the periodic domain with piecewise constant killing rate α on each cell. 
-    Domain is an abstract vector [q_1,…, q_{N+1}] where q_{N+1} and q_1 are identified with each other.
+    Build FEM matrices associated with the overdamped Langevin generator eigenproblem with periodic boundary conditions (PBC).
+    Domain is an abstract vector [q_1,…, q_{N+1}] where q_{N+1} and q_1 are identified with each other by PBC.
+    V should be a periodic function, ie V(q_1)=V(q_{N+1})
     """
-    function build_FEM_matrices_1D(V::Function,β::S,domain::AbstractVector{T}) where {S<:Real,T<:Real,U<:Real}
+    function build_FEM_matrices_1D_PBC(V::Function,β::S,domain::AbstractVector{T}) where {S<:Real,T<:Real,U<:Real}
         N=length(domain)-1
 
         M=zeros(N,N)
@@ -208,16 +211,17 @@ export calc_weights_periodic,
 
 
     """
-    Returns λ1,λ2 and associated gradients with respect to a soft killing rate α
+    Returns λ1,λ2 and associated gradients with respect to a soft killing log rate log_α
 
     M,B, diag_weights, off_diag_weights should be the return values of `build_FEM_matrices_1D`.
-    log_α is the vector of soft log killing rates on the cells of the mesh 
+    log_α is the vector of soft killing log rates on the cells of the mesh.
     This is easier to optimize, while avoiding negative values of α. α must be of size N, 
     Ω_indices correspond to the indices of vertices inside the domain (where α is finite). 
     """
-    function calc_soft_killing_grads(M,B,δM,∂λ,log_α,Ω_indices::AbstractVector{T}) where {T<:Integer}
+    function soft_killing_grads(M,B,δM,∂λ,log_α,Ω_indices::AbstractVector{T}) where {T<:Integer}
 
         N = first(size(M))
+        Nα=length(log_α)
         α = exp.(log_α)
         ΔM_dirichlet = δM(α)[Ω_indices,Ω_indices]
         M_dirichlet = M[Ω_indices,Ω_indices] + ΔM_dirichlet
@@ -234,17 +238,15 @@ export calc_weights_periodic,
         u1[Ω_indices] .= u1_dirichlet
         u2[Ω_indices] .= u2_dirichlet
 
-        ∇λ1 = α .* [∂λ(α,u1,ix) for ix=1:N]
-        ∇λ2 = α .* [∂λ(α,u2,ix) for ix=1:N]
+        ∇λ1 = α .* [∂λ(α,u1,ix) for ix=1:Nα]
+        ∇λ2 = α .* [∂λ(α,u2,ix) for ix=1:Nα]
 
         return u1,u2,λ1,λ2,∇λ1,∇λ2
 
     end
 
-    function build_FEM_schrodinger_1D(V::Function,β::S,domain::AbstractVector{T}) where {S<:Real,T<:Real}
-        N=length(domain)-1
-        M=zeros(N,N)
-        B=zeros(N,N)
+    function build_FEM_matrices_2D()
+
     end
 
 
@@ -388,6 +390,73 @@ export calc_weights_periodic,
     λs,us=eigen(M,B)
     
     return λs[1:2],us[:,1:2]
+    end
+    
+    """ 
+    Build FEM matrices associated with the overdamped Langevin generator eigenproblem, with homogeneous Neumann boundary conditions. 
+    Domain is an abstract vector [q_1,…, q_{N}]
+    """
+    function build_FEM_matrices_1D_Neumann(V::Function,β::S,domain::AbstractVector{T}) where {S<:Real,T<:Real}
+        N=length(domain)
+
+        M=zeros(N,N)
+        B=zeros(N,N)
+
+        mus = exp.(-β*V.(domain))
+    
+        for i=2:N-1
+            M[i,i] = inv(2β*(domain[i]-domain[i-1]))*(mus[i-1]+mus[i]) + inv(2β*(domain[i+1]-domain[i]))*(mus[i]+mus[i+1])
+            B[i,i] = (domain[i]-domain[i-1])*(mus[i-1]/12+mus[i]/4) + (domain[i+1]-domain[i])*(mus[i]/4+mus[i+1]/12)
+
+            M[i,i+1] = M[i+1,i] = -inv(2β*(domain[i+1]-domain[i]))*(mus[i]+mus[i+1])
+            B[i,i+1] = B[i+1,i] = (domain[i+1]-domain[i])*(mus[i]+mus[i+1])/12
+        end
+    
+        #boundary terms
+        M[1,1] = inv(2β*(domain[2]-domain[1]))*(mus[1]+mus[2])
+        B[1,1]= (domain[2]-domain[1])*(mus[1]/4+mus[2]/12)
+
+        M[1,2] = M[2,1] = -inv(2β*(domain[2]-domain[1]))*(mus[1]+mus[2])
+        B[1,2] = B[2,1] =(domain[2]-domain[1])*(mus[1]+mus[2])/12
+
+        M[N,N]=inv(2β*(domain[N]-domain[N-1]))*(mus[N-1]+mus[N])
+        B[N,N]=(domain[N]-domain[N-1])*(mus[N-1]/12+mus[N]/4)
+
+
+        #Mᵢⱼ = β⁻¹∫∇ϕᵢ⋅∇ϕⱼ dμ + ∫ϕᵢϕⱼα dμ
+        #Bᵢⱼ = ∫ϕᵢϕⱼ dμ 
+
+        M = Symmetric(M)
+        B = Symmetric(B)
+
+        function δM(α)
+            ΔM = zeros(N,N)
+            for i=2:N-1
+                ΔM[i,i] = α[i-1]*(domain[i]-domain[i-1])*(mus[i-1]/12+mus[i]/4) + α[i]*(domain[i+1]-domain[i])*(mus[i]/4+mus[i+1]/12)
+                ΔM[i,i+1] = ΔM[i+1,i] = α[i]*(domain[i+1]-domain[i])*(mus[i]+mus[i+1])/12
+            end
+
+            #boundary terms
+            ΔM[1,1] = α[1]*(domain[2]-domain[1])*(mus[1]/4+mus[2]/12)
+            ΔM[1,2] = ΔM[2,1] = α[1]*(domain[2]-domain[1])*(mus[1]+mus[2])/12
+            ΔM[N,N] = α[N-1]*(domain[N]-domain[N-1])*(mus[N-1]/12 +mus[N]/4)
+
+            return Symmetric(ΔM)
+        end
+
+
+        """
+        Derivative of a soft-killing operator eigenvalue with respect to a component of the soft killing rate. 
+        The index ix of this component should refer to the killing rate on the ix-th cell of the full mesh.
+        In the case of Dirichlet boundary condition, u should be extended with zeros adequately to match the dimensionality of the full periodic FEM generator.
+        """
+        function ∂λ(α,u,ix)
+            return (domain[ix+1]-domain[ix]) *( u[ix]^2*(mus[ix]/4 +mus[ix+1]/12) +
+                                                u[ix+1]^2*(mus[ix]/12 + mus[ix+1]/4)+
+                                                u[ix]*u[ix+1]*(mus[ix]+mus[ix+1])/6)
+        end
+
+        return M,B,δM,∂λ
     end
 
 end
