@@ -146,7 +146,7 @@ export calc_weights_periodic,
     Domain is an abstract vector [q_1,…, q_{N+1}] where q_{N+1} and q_1 are identified with each other by PBC.
     V should be a periodic function, ie V(q_1)=V(q_{N+1})
     """
-    function build_FEM_matrices_1D_PBC(V::Function,β::S,domain::AbstractVector{T}) where {S<:Real,T<:Real,U<:Real}
+    function build_FEM_matrices_1D_PBC(V::Function,β::S,domain::AbstractVector{T}) where {S<:Real,T<:Real}
         N=length(domain)-1
 
         M=zeros(N,N)
