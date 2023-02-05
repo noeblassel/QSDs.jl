@@ -11,6 +11,8 @@ export calc_weights_periodic,
 
     using Cubature, LinearAlgebra, Triangulate
 
+    Base.length(nothing) = 0 # for convenience
+
     """
     Precompute weights for the M and δM matrices in the SQSD_1D_FEM function, to avoid redudant quadrature calculations.
 
@@ -142,7 +144,7 @@ export calc_weights_periodic,
     end
 
     """ 
-    Build FEM matrices associated with the overdamped Langevin generator eigenproblem with periodic boundary conditions (PBC).
+    Build FEM matrices in 1D associated with the overdamped Langevin generator eigenproblem with periodic boundary conditions (PBC).
     Domain is an abstract vector [q_1,…, q_{N+1}] where q_{N+1} and q_1 are identified with each other by PBC.
     V should be a periodic function, ie V(q_1)=V(q_{N+1})
     """
@@ -393,7 +395,7 @@ export calc_weights_periodic,
     end
     
     """ 
-    Build FEM matrices associated with the overdamped Langevin generator eigenproblem, with homogeneous Neumann boundary conditions. 
+    Build FEM matrices in 1D associated with the overdamped Langevin generator eigenproblem, with homogeneous Neumann boundary conditions. 
     Domain is an abstract vector [q_1,…, q_{N}]
     """
     function build_FEM_matrices_1D_Neumann(V::Function,β::S,domain::AbstractVector{T}) where {S<:Real,T<:Real}
@@ -459,4 +461,112 @@ export calc_weights_periodic,
         return M,B,δM,∂λ
     end
 
-end
+    """ 
+    Build FEM matrices in 2D associated with the overdamped Langevin generator eigenproblem with possible soft killing perturbation.
+    V should be a function V(x,y)::Float64,
+    β is the inverse thermodynamic temperature
+    domain should be a TriangulateIO object from Triangulate.jl (for instance obtained from calling QSDs.triangulate_domain)
+    for now:
+    Neumann boundaries by default
+    in the future:
+    pbc should be a 3 x Q matrix of Int32 of edge quotienting relations, with each column of the form [i,j],
+    where i and j  are the indices of identified edges.
+    Orientation changes are possible in the sense that eᵢ[1] gets mapped to eⱼ[1], and eᵢ[2] gets mapped to eⱼ[2].
+    """
+    function build_FEM_matrices_2D(V::Function,β::S,domain::TriangulateIO,dirichlet_boundary_points= -1) where {S<:Real}
+        N = numberofpoints(domain)
+        M=zeros(N,N)
+        B=zeros(N,N)
+
+        mus = zeros(N)
+
+        for i=1:N
+            xi,yi = domain.pointlist[:,i]
+            mus[i] = exp(-β * V(xi,yi)) # vertex values of unnormalized Gibbs measure    
+        end
+
+        tri_area(xi,yi,xj,yj,xk,yk) = (xi*yj - xj*yi + xj*yk - xk*yj + xk*yi - yk*xi)/2 # oriented area of a triangle ( + is clockwise orientation)
+        off_diag_M_int(xi,yi,xj,yj,xk,yk,μi,μj,μk,Aijk) = -((xi-xk)*(xj-xk)+(yi-yk)*(yj-yk))*(μi+μj+μk)/12Aijk #∫∇ϕᵢ⋅∇ϕⱼdμ on triangle Tᵢⱼₖ
+        diag_M_int(xi,yi,xj,yj,xk,yk,μi,μj,μk,Aijk) = ((xj-xk)^2+(yj-yk)^2)*(μi+μj+μk)/12Aijk # ∫|∇ϕᵢ|²dμ on triangle Tᵢⱼₖ
+        off_diag_B_int(μi,μj,μk,Aijk) = Aijk * ((μi+μj)/30 + μk/60) #∫ϕᵢϕⱼdμ on triangle Tᵢⱼₖ
+        diag_B_int(μi,μj,μk,Aijk) = Aijk * (μi/10 + (μj+μk)/30) #∫ϕᵢ²dμ on triangle Tᵢⱼₖ
+
+
+        T = size(domain.trianglelist)[2]
+        tmp = 0.0
+
+        for n=1:T
+            i,j,k = domain.trianglelist[:,n]
+            xi,yi = domain.pointlist[:,i]
+            xj,yj = domain.pointlist[:,j]
+            xk,yk = domain.pointlist[:,k]
+
+            μi,μj,μk= mus[i],mus[j],mus[k]
+
+            Aijk = tri_area(xi,yi,xj,yj,xk,yk)
+
+            if !(i ∈ dirichlet_boundary_points)
+                M[i,i] += diag_M_int(xi,yi,xj,yj,xk,yk,μi,μj,μk,Aijk)/β
+                B[i,i] += diag_B_int(μi,μj,μk,Aijk)
+            end
+
+            if !(j ∈ dirichlet_boundary_points)
+                M[j,j] += diag_M_int(xj,yj,xk,yk,xi,yi,μj,μk,μi,Aijk)/β
+                B[j,j] += diag_B_int(μj,μk,μi,Aijk)
+            end
+            
+            if !(k ∈ dirichlet_boundary_points)
+                M[k,k] += diag_M_int(xk,yk,xi,yi,xj,yj,μk,μi,μj,Aijk)/β
+                B[k,k] += diag_B_int(μk,μi,μj,Aijk)
+            end
+
+            if !(i ∈ dirichlet_boundary_points) && !(j ∈ dirichlet_boundary_points)
+                tmp = off_diag_M_int(xi,yi,xj,yj,xk,yk,μi,μj,μk,Aijk)/β
+                M[i,j] += tmp
+                M[j,i] += tmp
+                tmp = off_diag_B_int(μi,μj,μk,Aijk)
+                B[i,j] += tmp
+                B[j,i] += tmp
+            end
+
+            if !(j ∈ dirichlet_boundary_points) && !(k ∈ dirichlet_boundary_points)
+                tmp = off_diag_M_int(xj,yj,xk,yk,xi,yi,μj,μk,μi,Aijk)/β
+                M[j,k] += tmp
+                M[k,j] += tmp
+                tmp = off_diag_B_int(μj,μk,μi,Aijk)
+                B[j,k] += tmp
+                B[k,j] += tmp
+            end
+
+            if !(i ∈ dirichlet_boundary_points) && !(k ∈ dirichlet_boundary_points)
+                tmp = off_diag_M_int(xk,yk,xi,yi,xj,yj,μk,μi,μj,Aijk)/β
+                M[i,k] += tmp
+                M[k,i] += tmp
+                tmp = off_diag_B_int(μk,μi,μj,Aijk)
+                B[i,k] += tmp
+                B[k,i] += tmp
+            end
+        end
+
+        Ω = setdiff(1:N,dirichlet_boundary_points)
+        M=Symmetric(M[Ω,Ω])
+        B=Symmetric(B[Ω,Ω])
+
+        return M,B
+    end
+
+
+    """
+    Build a triangulation of a given rectangular domain,
+    with optional inner boundaries, to which the triangulation will conform.
+    These are given by a vector of parametrizations γ:[0,1]-> D where D is the domain.
+    nx and ny are the number of meshpoints on the horizontal and vertical sides of the rectangular boundary, 
+    and n_contours is a vector giving the number of meshpoints allocated to each inner boundary.
+    """
+    function conforming_triangulation(x0::S,y0::S,w::S,h::S,nx::I,ny::I,contours::Vector{T}=[],n_contours::Vector{I}=[]) where {S<:Real,T<:Function,I<:Integer}
+
+    end
+    
+
+
+end # module QSDs
