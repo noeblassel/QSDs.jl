@@ -7,7 +7,11 @@ export calc_weights_periodic,
         SQSD_1D_FEM_schrodinger,
         build_FEM_matrices_1D_PBC,
         build_FEM_matrices_1D_Neumann,
-        soft_killing_grads
+        soft_killing_grads,
+        build_FEM_matrices_2D,
+        apply_bc,
+        reverse_bc,
+        qsd_2d
 
     using Cubature, LinearAlgebra, Triangulate
 
@@ -461,19 +465,23 @@ export calc_weights_periodic,
         return M,B,δM,∂λ
     end
 
+
+    @inline tri_area(xi,yi,xj,yj,xk,yk) = (xi*yj - xj*yi + xj*yk - xk*yj + xk*yi - yk*xi)/2 # oriented area of a triangle ( + is clockwise orientation)
+    @inline off_diag_M_int(xi,yi,xj,yj,xk,yk,μi,μj,μk,Aijk) = -((xi-xk)*(xj-xk)+(yi-yk)*(yj-yk))*(μi+μj+μk)/12Aijk #∫∇ϕᵢ⋅∇ϕⱼdμ on triangle Tᵢⱼₖ
+    @inline diag_M_int(xi,yi,xj,yj,xk,yk,μi,μj,μk,Aijk) = ((xj-xk)^2+(yj-yk)^2)*(μi+μj+μk)/12Aijk # ∫|∇ϕᵢ|²dμ on triangle Tᵢⱼₖ
+    @inline off_diag_B_int(μi,μj,μk,Aijk) = Aijk * ((μi+μj)/30 + μk/60) #∫ϕᵢϕⱼdμ on triangle Tᵢⱼₖ
+    @inline diag_B_int(μi,μj,μk,Aijk) = Aijk * (μi/10 + (μj+μk)/30) #∫ϕᵢ²dμ on triangle Tᵢⱼₖ
+
     """ 
     Build FEM matrices in 2D associated with the overdamped Langevin generator eigenproblem with possible soft killing perturbation.
     V should be a function V(x,y)::Float64,
     β is the inverse thermodynamic temperature
     domain should be a TriangulateIO object from Triangulate.jl (for instance obtained from calling QSDs.triangulate_domain)
-    for now:
-    Neumann boundaries by default
-    in the future:
-    pbc should be a 3 x Q matrix of Int32 of edge quotienting relations, with each column of the form [i,j],
-    where i and j  are the indices of identified edges.
-    Orientation changes are possible in the sense that eᵢ[1] gets mapped to eⱼ[1], and eᵢ[2] gets mapped to eⱼ[2].
+    periodic_images is a vector of 2 x N indices where N is the number of points in the triangulation, where periodic_images[:,k] = [i,j] means that point i is identified with point j.
+    In the case more than two points are identified, the user should make sure that the chosen image is unique.
+    The issue of orientation-reversing identifications is ignored.
     """
-    function build_FEM_matrices_2D(V::Function,β::S,domain::TriangulateIO,dirichlet_boundary_points= -1) where {S<:Real}
+    function build_FEM_matrices_2D(V::Function,β::S,domain::TriangulateIO) where {S<:Real}
         N = numberofpoints(domain)
         M=zeros(N,N)
         B=zeros(N,N)
@@ -485,15 +493,9 @@ export calc_weights_periodic,
             mus[i] = exp(-β * V(xi,yi)) # vertex values of unnormalized Gibbs measure    
         end
 
-        tri_area(xi,yi,xj,yj,xk,yk) = (xi*yj - xj*yi + xj*yk - xk*yj + xk*yi - yk*xi)/2 # oriented area of a triangle ( + is clockwise orientation)
-        off_diag_M_int(xi,yi,xj,yj,xk,yk,μi,μj,μk,Aijk) = -((xi-xk)*(xj-xk)+(yi-yk)*(yj-yk))*(μi+μj+μk)/12Aijk #∫∇ϕᵢ⋅∇ϕⱼdμ on triangle Tᵢⱼₖ
-        diag_M_int(xi,yi,xj,yj,xk,yk,μi,μj,μk,Aijk) = ((xj-xk)^2+(yj-yk)^2)*(μi+μj+μk)/12Aijk # ∫|∇ϕᵢ|²dμ on triangle Tᵢⱼₖ
-        off_diag_B_int(μi,μj,μk,Aijk) = Aijk * ((μi+μj)/30 + μk/60) #∫ϕᵢϕⱼdμ on triangle Tᵢⱼₖ
-        diag_B_int(μi,μj,μk,Aijk) = Aijk * (μi/10 + (μj+μk)/30) #∫ϕᵢ²dμ on triangle Tᵢⱼₖ
-
-
         T = size(domain.trianglelist)[2]
         tmp = 0.0
+        tri_areas = zeros(T)
 
         for n=1:T
             i,j,k = domain.trianglelist[:,n]
@@ -504,67 +506,173 @@ export calc_weights_periodic,
             μi,μj,μk= mus[i],mus[j],mus[k]
 
             Aijk = tri_area(xi,yi,xj,yj,xk,yk)
+            tri_areas[n]=Aijk
 
-            if !(i ∈ dirichlet_boundary_points)
-                M[i,i] += diag_M_int(xi,yi,xj,yj,xk,yk,μi,μj,μk,Aijk)/β
-                B[i,i] += diag_B_int(μi,μj,μk,Aijk)
-            end
+            M[i,i] += diag_M_int(xi,yi,xj,yj,xk,yk,μi,μj,μk,Aijk)/β
+            B[i,i] += diag_B_int(μi,μj,μk,Aijk)
 
-            if !(j ∈ dirichlet_boundary_points)
-                M[j,j] += diag_M_int(xj,yj,xk,yk,xi,yi,μj,μk,μi,Aijk)/β
-                B[j,j] += diag_B_int(μj,μk,μi,Aijk)
-            end
-            
-            if !(k ∈ dirichlet_boundary_points)
-                M[k,k] += diag_M_int(xk,yk,xi,yi,xj,yj,μk,μi,μj,Aijk)/β
-                B[k,k] += diag_B_int(μk,μi,μj,Aijk)
-            end
+            M[j,j] += diag_M_int(xj,yj,xk,yk,xi,yi,μj,μk,μi,Aijk)/β
+            B[j,j] += diag_B_int(μj,μk,μi,Aijk)
 
-            if !(i ∈ dirichlet_boundary_points) && !(j ∈ dirichlet_boundary_points)
-                tmp = off_diag_M_int(xi,yi,xj,yj,xk,yk,μi,μj,μk,Aijk)/β
-                M[i,j] += tmp
-                M[j,i] += tmp
-                tmp = off_diag_B_int(μi,μj,μk,Aijk)
-                B[i,j] += tmp
-                B[j,i] += tmp
-            end
+        
+            M[k,k] += diag_M_int(xk,yk,xi,yi,xj,yj,μk,μi,μj,Aijk)/β
+            B[k,k] += diag_B_int(μk,μi,μj,Aijk)
 
-            if !(j ∈ dirichlet_boundary_points) && !(k ∈ dirichlet_boundary_points)
-                tmp = off_diag_M_int(xj,yj,xk,yk,xi,yi,μj,μk,μi,Aijk)/β
-                M[j,k] += tmp
-                M[k,j] += tmp
-                tmp = off_diag_B_int(μj,μk,μi,Aijk)
-                B[j,k] += tmp
-                B[k,j] += tmp
-            end
+            tmp = off_diag_M_int(xi,yi,xj,yj,xk,yk,μi,μj,μk,Aijk)/β
+            M[i,j] += tmp
+            M[j,i] += tmp
+            tmp = off_diag_B_int(μi,μj,μk,Aijk)
+            B[i,j] += tmp
+            B[j,i] += tmp
 
-            if !(i ∈ dirichlet_boundary_points) && !(k ∈ dirichlet_boundary_points)
-                tmp = off_diag_M_int(xk,yk,xi,yi,xj,yj,μk,μi,μj,Aijk)/β
-                M[i,k] += tmp
-                M[k,i] += tmp
-                tmp = off_diag_B_int(μk,μi,μj,Aijk)
-                B[i,k] += tmp
-                B[k,i] += tmp
-            end
+
+            tmp = off_diag_M_int(xj,yj,xk,yk,xi,yi,μj,μk,μi,Aijk)/β
+            M[j,k] += tmp
+            M[k,j] += tmp
+            tmp = off_diag_B_int(μj,μk,μi,Aijk)
+            B[j,k] += tmp
+            B[k,j] += tmp
+
+
+            tmp = off_diag_M_int(xk,yk,xi,yi,xj,yj,μk,μi,μj,Aijk)/β
+            M[i,k] += tmp
+            M[k,i] += tmp
+            tmp = off_diag_B_int(μk,μi,μj,Aijk)
+            B[i,k] += tmp
+            B[k,i] += tmp
+
         end
 
-        Ω = setdiff(1:N,dirichlet_boundary_points)
-        M=Symmetric(M[Ω,Ω])
-        B=Symmetric(B[Ω,Ω])
+        M=Symmetric(M)
+        B=Symmetric(B)
 
-        return M,B
+        function δM(α)
+            ΔM = zeros(N,N)
+            tmp = 0.0
+
+            for n=1:T
+                i,j,k = domain.trianglelist[:,n]
+                xi,yi = domain.pointlist[:,i]
+                xj,yj = domain.pointlist[:,j]
+                xk,yk = domain.pointlist[:,k]
+
+                μi,μj,μk= mus[i],mus[j],mus[k]
+
+                Aijk = tri_areas[n]
+
+                ΔM[i,i] += α[n] * diag_B_int(μi,μj,μk,Aijk)
+
+                ΔM[j,j] += α[n] * diag_B_int(μj,μk,μi,Aijk)
+
+                ΔM[k,k] += α[n] * diag_B_int(μk,μi,μj,Aijk)
+
+                tmp = off_diag_B_int(μi,μj,μk,Aijk)
+                ΔM[i,j] += α[n] * tmp
+                ΔM[j,i] += α[n] * tmp
+
+                tmp = off_diag_B_int(μj,μk,μi,Aijk)
+                ΔM[j,k] += α[n] * tmp
+                ΔM[k,j] += α[n] * tmp
+
+                tmp = off_diag_B_int(μk,μi,μj,Aijk)
+                ΔM[i,k] += α[n] * tmp
+                ΔM[k,i] += α[n] * tmp
+
+            end
+                return Symmetric(ΔM)
+        end
+
+        function ∂λ(u,α,ix)
+            i,j,k = domain.trianglelist[:,ix]
+            xi,yi = domain.pointlist[:,i]
+            xj,yj = domain.pointlist[:,j]
+            xk,yk = domain.pointlist[:,k]
+
+            μi,μj,μk= mus[i],mus[j],mus[k]
+
+            Aijk = tri_areas[ix]
+
+            grad = u[i]^2 * diag_B_int(μi,μj,μk,Aijk) +
+                u[j]^2 * diag_B_int(μj,μk,μi,Aijk) +
+                u[k]^2 * diag_B_int(μk,μi,μj,Aijk) +
+                2u[i] * u[j] * off_diag_B_int(μi,μj,μk,Aijk) +
+                2u[j]*u[k]* off_diag_B_int(μj,μk,μi,Aijk) +
+                2u[k]*u[i]* off_diag_B_int(μk,μi,μj,Aijk)
+            
+            return grad
+        end
+
+        return M,B,δM,∂λ
     end
 
+    """
+    Apply Periodic and Dirichlet boundary conditions to FEM matrices in 2D.
+    """
+    function apply_bc(M,B,periodic_images,dirichlet_boundary_points)#,dirichlet_boundary_points)
+        Mper = Matrix(M)
+        Bper = Matrix(B)
+
+        for ix=1:size(periodic_images)[2]
+            i,j = periodic_images[:,ix]
+            Mper[j,:] += Mper[i,:]
+            Mper[:,j] += Mper[:,i]
+           # Mper[j,j] -= Mper[i,i] # correct double counting
+
+            Bper[j,:] += Bper[i,:]
+            Bper[:,j] += Bper[:,i]
+          #  Bper[j,j] -= Bper[i,i] # correct double counting
+
+        end
+        N = size(M)[1]
+
+        reduced_points = Set(vcat(periodic_images[1,:],dirichlet_boundary_points))
+        unreduced_points = setdiff(1:N,reduced_points)
+
+        Mper=Mper[unreduced_points,unreduced_points]
+        Bper=Bper[unreduced_points,unreduced_points]
+
+        return Symmetric(Mper),Symmetric(Bper)
+    end
 
     """
-    Build a triangulation of a given rectangular domain,
-    with optional inner boundaries, to which the triangulation will conform.
-    These are given by a vector of parametrizations γ:[0,1]-> D where D is the domain.
-    nx and ny are the number of meshpoints on the horizontal and vertical sides of the rectangular boundary, 
-    and n_contours is a vector giving the number of meshpoints allocated to each inner boundary.
+    Reconstruct eigenvectors that have been reduced by boundary conditions
+    to a format compatible with the triangulation of the domain.
     """
-    function conforming_triangulation(x0::S,y0::S,w::S,h::S,nx::I,ny::I,contours::Vector{T}=[],n_contours::Vector{I}=[]) where {S<:Real,T<:Function,I<:Integer}
+    function reverse_bc(u_reduced,N,periodic_images,dirichlet_boundary_points)#,dirichlet_boundary_points)
+        reduced_points = Set(vcat(periodic_images[1,:],dirichlet_boundary_points))
+        unreduced_points=setdiff(1:N,reduced_points)
+        u = zeros(N)
+        u[unreduced_points] = u_reduced
 
+        for ix=1:size(periodic_images)[2]
+            i,j = periodic_images[:,ix]
+            u[i] = u[j]
+        end
+
+        u[dirichlet_boundary_points] .= 0
+        return u
+    end
+
+    """
+    Returns the qsd associated with a discretized right eigenvector of the generator, with optional soft killing.
+    """
+    function qsd_2d(u,V,β,domain::TriangulateIO)
+        mu(x,y) = exp(-β*V(x,y))
+        X = domain.pointlist[1,:]
+        Y = domain.pointlist[2,:]
+        mus = mu.(X,Y)
+        Z = 0.0
+        
+        for n=1:numberoftriangles(domain)
+            (i,j,k) = domain.trianglelist[:,n]
+            
+            xi,yi = domain.pointlist[:,i]
+            xj,yj = domain.pointlist[:,j]
+            xk,yk = domain.pointlist[:,k]
+
+            Z += tri_area(xi,yi,xj,yj,xk,yk) * (u[i]+u[j]+u[k])*(mus[i]+mus[j]+mus[k])/6
+        end
+        return (u .* mus)/Z
     end
     
 
