@@ -115,7 +115,7 @@ u1,u2,λ1,λ2,∇λ1,∇λ2=QSDs.soft_killing_grads_2D(M,B,δM,∂λ,log_α,peri
 log_α_min = -10
 log_α_max = 10
 
-goat_α,goat_obj= opt_alpha!(M,B,δM,∂λ,periodic_images,dirichlet_boundary_points,Niter,η0,20,log_α,log_α_min,log_α_max,grad_mask,"/home/nblassel/Documents/QSDs.jl/alpha_2D.out","/home/nblassel/Documents/QSDs.jl/obj_2D.out",10)
+goat_α,goat_obj= opt_alpha!(M,B,δM,∂λ,periodic_images,dirichlet_boundary_points,Niter,η0,20,log_α,log_α_min,log_α_max,grad_mask,"/home/nblassel/Documents/QSDs.jl/alpha_2D.out","/home/nblassel/Documents/QSDs.jl/obj_2D.out")
 
 X=triout.pointlist[1,:]
 Y=triout.pointlist[2,:]
