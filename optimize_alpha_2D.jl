@@ -2,7 +2,6 @@
 
 include("QSDs.jl")
 include("GeometryUtils.jl")
-include("PlotUtils.jl")
 
 using .QSDs, .GeometryUtils, Triangulate, LinearAlgebra
 
