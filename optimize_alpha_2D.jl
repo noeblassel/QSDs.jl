@@ -95,6 +95,10 @@ N = numberofpoints(triout)
 dirichlet_boundary_points = vcat(core_set_ixs[1],core_set_ixs[2],core_set_ixs[3])
 home_coreset_points = core_set_ixs[4]
 
+X=triout.pointlist[1,:]
+Y=triout.pointlist[2,:]
+T=triout.trianglelist
+
 f = open(output_file,"w")
 println(f,"β=",β)
 println(f,"log_α_min=",log_α_min)
@@ -128,10 +132,6 @@ log_α[grad_mask] .= -Inf
 u1,u2,λ1,λ2,∇λ1,∇λ2=QSDs.soft_killing_grads_2D(M,B,δM,∂λ,log_α,periodic_images,dirichlet_boundary_points)
 
 goat_α,goat_obj= opt_alpha!(M,B,δM,∂λ,periodic_images,dirichlet_boundary_points,Niter,η0,20,log_α,log_α_min,log_α_max,grad_mask,checkpoint_file)
-
-X=triout.pointlist[1,:]
-Y=triout.pointlist[2,:]
-T=triout.trianglelist
 
 f=open(output_file,"a")
 println(f,"log_α_star=",goat_α)
