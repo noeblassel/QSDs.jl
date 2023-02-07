@@ -12,7 +12,7 @@ module GeometryUtils
     n_core_set_boundary gives the number of boundary points for each core set.
     The function returns the triangulation, an array of index pairs which are related by periodicity, as well as a vector of vectors of indices, giving for each core set the index of points lying on or within its boundary.
     """
-    function conforming_triangulation(cx,cy,Lx,Ly,Nx,Ny,core_sets,n_core_set_boundary,max_area,min_angle=20,quiet=true)
+    function conforming_triangulation(cx,cy,Lx,Ly,Nx,Ny,core_sets,n_core_set_boundary,max_area,min_angle=20;quiet=true)
         Rx = range(cx,cx+Lx,Nx)
         Ry=range(cy,cy+Ly,Ny)
 

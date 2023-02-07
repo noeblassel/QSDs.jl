@@ -5,7 +5,7 @@ include("SplinePotentials.jl")
 
 
 function opt_alpha!(M,B,δM,∂λ,Ω_indices,N_iter,η0,n_line_search,log_α,min_log_α,max_log_α, grad_mask,log_α_hist_array=nothing,obj_hist_array=nothing,store_every=1)
-    log_α0=copy(log_α)
+    log_α0=copy(    log_α)
     for i=0:N_iter
 
         ((i%store_every == 0)&&(log_α_hist_array !== nothing)) && (push!(log_α_hist_array,copy(log_α0)))

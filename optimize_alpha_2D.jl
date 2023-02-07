@@ -78,7 +78,6 @@ end
 
 V(x,y)= cos(2π*x)-cos(2π*(y-x))
 
-β=2.0
 core_sets = [-0.5 0.5 -0.5 0.5 ; -0.5 -0.5 0.5 0.5; 0.05 0.05 0.05 0.05]
 n_core_set_boundary = [10,10,10,10]
 
@@ -87,7 +86,7 @@ cx,cy = -1.0,-1.0
 
 
 min_angle = 20
-triout, periodic_images , core_set_ixs = conforming_triangulation(cx,cy,Lx,Ly,Nx,Ny,core_sets,n_core_set_boundary,max_area,min_angle)
+triout, periodic_images , core_set_ixs = conforming_triangulation(cx,cy,Lx,Ly,Nx,Ny,core_sets,n_core_set_boundary,max_area,min_angle,quiet=false)
 Ntri = numberoftriangles(triout)
 N = numberofpoints(triout)
 dirichlet_boundary_points = vcat(core_set_ixs[1],core_set_ixs[2],core_set_ixs[3])
