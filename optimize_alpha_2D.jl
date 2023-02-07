@@ -14,12 +14,14 @@ Niter = parse(Int64,ARGS[4])
 Nx = parse(Int64,ARGS[5])
 Ny = parse(Int64,ARGS[6])
 
-max_area = parse(Float64,ARGS[7])
+N_coreset_boundary_points=parse(Int64,ARGS[7])
 
-log_α_min = parse(Float64,ARGS[8])
-log_α_max = parse(Float64,ARGS[9])
+max_area = parse(Float64,ARGS[8])
 
-println("Usage: β checkpoint_file output_file Niter Nx Ny max_area")
+log_α_min = parse(Float64,ARGS[9])
+log_α_max = parse(Float64,ARGS[10])
+
+println("Usage: β checkpoint_file output_file Niter Nx Ny N_coreset_boundary_points max_area log_α_min log_α_max")
 
 function opt_alpha!(M,B,δM,∂λ,periodic_images,dirichlet_boundary_points,N_iter,η0,n_line_search,log_α,min_log_α,max_log_α, grad_mask,checkpoint_file)
     Nα = length(log_α)
