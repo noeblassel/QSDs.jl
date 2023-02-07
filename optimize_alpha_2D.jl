@@ -84,7 +84,7 @@ end
 V(x,y)= cos(2π*x)-cos(2π*(y-x))
 
 core_sets = [-0.5 0.5 -0.5 0.5 ; -0.5 -0.5 0.5 0.5; 0.05 0.05 0.05 0.05]
-n_core_set_boundary = [10,10,10,10]
+n_core_set_boundary = repeat([N_coreset_boundary_points],size(core_sets)[2])
 
 Lx = Ly=2.0
 cx,cy = -1.0,-1.0
