@@ -1,23 +1,26 @@
+#!/libre/blasseln/julia-1.8.2/bin/julia
+
 include("QSDs.jl")
 include("GeometryUtils.jl")
 include("PlotUtils.jl")
 
-using .QSDs, .GeometryUtils, .PlotUtils, TriplotRecipes, Triangulate, Plots, LinearAlgebra
+using .QSDs, .GeometryUtils, Triangulate, LinearAlgebra
 
+β = parse(Float64,ARGS[1])
+checkpoint_file = ARGS[2]
+output_file = ARGS[3]
 
-function opt_alpha!(M,B,δM,∂λ,periodic_images,dirichlet_boundary_points,N_iter,η0,n_line_search,log_α,min_log_α,max_log_α, grad_mask,alpha_log_file,obj_log_file)
+function opt_alpha!(M,B,δM,∂λ,periodic_images,dirichlet_boundary_points,N_iter,η0,n_line_search,log_α,min_log_α,max_log_α, grad_mask,checkpoint_file)
     Nα = length(log_α)
 
-    f=open(alpha_log_file,"w")
-    println(f,"log_alpha_star=",log_α)
-    close(f)
-
-    f=open(obj_log_file,"w")
-    println(f,"obj_star=",-Inf)
-    close(f)
-
+    
     goat_α = copy(log_α)
     goat_obj = -Inf
+    
+    f=open(checkpoint_file,"w")
+    println(f,"log_alpha_star=",goat_α)
+    println(f,"obj_star=",goat_obj)
+    close(f)
 
     for i=0:N_iter
         println("=== Iteration $i ===")
@@ -55,15 +58,14 @@ function opt_alpha!(M,B,δM,∂λ,periodic_images,dirichlet_boundary_points,N_it
         clamp!(log_α,min_log_α,max_log_α)
         log_α[grad_mask] .= -Inf
 
-        f=open(alpha_log_file,"w")
+        f=open(checkpoint_file,"w")
         println(f,"log_alpha_star=",goat_α)
-        close(f)
-    
-        f=open(obj_log_file,"w")
-        println(f,"obj_star=",-Inf)
+        println(f,"obj_star=",goat_obj)
         close(f)
 
     end
+
+    return goat_α, goat_obj
 end
 
 V(x,y)= cos(2π*x)-cos(2π*(y-x))
@@ -108,14 +110,27 @@ u1,u2,λ1,λ2,∇λ1,∇λ2=QSDs.soft_killing_grads_2D(M,B,δM,∂λ,log_α,peri
 log_α_min = -10
 log_α_max = 10
 
-opt_alpha!(M,B,δM,∂λ,periodic_images,dirichlet_boundary_points,Niter,η0,20,log_α,log_α_min,log_α_max,grad_mask,"/home/nblassel/Documents/QSDs.jl/alpha_2D.out","/home/nblassel/Documents/QSDs.jl/obj_2D.out",10)
+goat_α,goat_obj= opt_alpha!(M,B,δM,∂λ,periodic_images,dirichlet_boundary_points,Niter,η0,20,log_α,log_α_min,log_α_max,grad_mask,"/home/nblassel/Documents/QSDs.jl/alpha_2D.out","/home/nblassel/Documents/QSDs.jl/obj_2D.out",10)
 
 X=triout.pointlist[1,:]
 Y=triout.pointlist[2,:]
 T=triout.trianglelist
 
+f=open(log_file,"a")
+println(f,"X=",X)
+println(f,"Y=",Y)
+println(f,"T=",T)
+println(f,"periodic_images=",periodic_images)
+println(f,"dirichlet_boundary_points=",dirichlet_boundary_points)
+println(f,"home_coreset_points=",home_coreset_points)
+println(f,"log_α_min=",log_α_min)
+println(f,"log_α_max=",log_α_max)
+println(f,"log_α_star=",goat_α)
+println(f,"best_obj=",goat_obj)
+println(f,"β=",β)
+close(f)
 
-log_α_clamped = copy(log_α)
+#= log_α_clamped = copy(log_α)
 
 log_α_clamped[ log_α .< log_α_min] .= log_α_min
 log_α_clamped[ log_α .> log_α_max] .= log_α_max
@@ -125,4 +140,4 @@ log_α_clamped[ log_α .> log_α_max] .= log_α_max
 z_α=PlotUtils.to_vertex_function(α,triout)
 z_α[dirichlet_boundary_points] .= exp(log_α_max)
 
-tripcolor(X,Y,log.(z_α),T,aspectratio=1,size=(800,800))
+tripcolor(X,Y,log.(z_α),T,aspectratio=1,size=(800,800)) =#
