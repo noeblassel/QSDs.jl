@@ -251,10 +251,6 @@ export calc_weights_periodic,
 
     end
 
-    function build_FEM_matrices_2D()
-
-    end
-
 
     function QSD_1D_FEM_schrodinger(W::Function, β::Float64,Ω::AbstractVector{Float64};weights=nothing , precond=nothing)
 
@@ -456,7 +452,7 @@ export calc_weights_periodic,
         The index ix of this component should refer to the killing rate on the ix-th cell of the full mesh.
         In the case of Dirichlet boundary condition, u should be extended with zeros adequately to match the dimensionality of the full periodic FEM generator.
         """
-        function ∂λ(α,u,ix)
+        function ∂λ(u,ix)
             return (domain[ix+1]-domain[ix]) *( u[ix]^2*(mus[ix]/4 +mus[ix+1]/12) +
                                                 u[ix+1]^2*(mus[ix]/12 + mus[ix+1]/4)+
                                                 u[ix]*u[ix+1]*(mus[ix]+mus[ix+1])/6)
@@ -552,10 +548,6 @@ export calc_weights_periodic,
 
             for n=1:T
                 i,j,k = domain.trianglelist[:,n]
-                xi,yi = domain.pointlist[:,i]
-                xj,yj = domain.pointlist[:,j]
-                xk,yk = domain.pointlist[:,k]
-
                 μi,μj,μk= mus[i],mus[j],mus[k]
 
                 Aijk = tri_areas[n]
@@ -582,15 +574,12 @@ export calc_weights_periodic,
                 return Symmetric(ΔM)
         end
 
-        function ∂λ(u,α,ix)
-            i,j,k = domain.trianglelist[:,ix]
-            xi,yi = domain.pointlist[:,i]
-            xj,yj = domain.pointlist[:,j]
-            xk,yk = domain.pointlist[:,k]
+        function ∂λ(u,n)
+            i,j,k = domain.trianglelist[:,n]
 
             μi,μj,μk= mus[i],mus[j],mus[k]
 
-            Aijk = tri_areas[ix]
+            Aijk = tri_areas[n]
 
             grad = u[i]^2 * diag_B_int(μi,μj,μk,Aijk) +
                 u[j]^2 * diag_B_int(μj,μk,μi,Aijk) +
@@ -675,6 +664,23 @@ export calc_weights_periodic,
         return (u .* mus)/Z
     end
     
+    function soft_killing_grads_2D(M,B,δM,∂λ,log_α,periodic_images,dirichlet_boundary_points)
+        N = first(size(M))
+        Nα=length(log_α)
+        α = exp.(log_α)
+        ΔM = δM(α)
+        Lred,Bred=apply_bc(M+ΔM,B,periodic_images,dirichlet_boundary_points)
+
+        λs,us = eigen(Lred,Bred)
+        u1 = reverse_bc(us[:,1],N,periodic_images,dirichlet_boundary_points)
+        u2 = reverse_bc(us[:,2],N,periodic_images,dirichlet_boundary_points)
+        λ1,λ2 = λs[1:2]
+
+        ∇λ1 = α .* [∂λ(u1,n) for n=1:Nα]
+        ∇λ2 = α .* [∂λ(u2,n) for n=1:Nα]
+
+        return u1,u2,λ1,λ2,∇λ1,∇λ2
+    end
 
 
 end # module QSDs

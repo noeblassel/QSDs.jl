@@ -51,20 +51,21 @@ module GeometryUtils
 
         core_set_ixs=[Cint[] for i=1:k]
         
-        for ix=1:k
-            x0,y0,r = core_sets[:,ix]
+        for i=1:k
+            x0,y0,r = core_sets[:,i]
+            n = n_core_set_boundary[i]
 
-            n = n_core_set_boundary[ix]
             t = range(0,2π,n+1)
             x =  x0 .+ r*cos.(t[1:n])
             y = y0 .+ r*sin.(t[1:n])
 
-            i= collect(Cint,1:n)
-            push!(i,1)
             (_,Npts) = size(boundary_points)
+
+            ixs = collect(Cint,Npts+1:Npts+n)
+            push!(ixs ,Npts+1)
             boundary_points = hcat(boundary_points,transpose(hcat(x,y)))
-            boundary_edges = hcat(boundary_edges,transpose(Npts .+ hcat(i[1:n],i[2:n+1])))
-            append!(core_set_ixs[k],Npts .+ 1:n)
+            boundary_edges = hcat(boundary_edges,transpose(hcat(ixs[1:n],ixs[2:n+1])))
+            append!(core_set_ixs[i],ixs)
         end
 
         triin = TriangulateIO()
@@ -77,16 +78,15 @@ module GeometryUtils
         for ix=1:numberofpoints(triout)
             x,y=triout.pointlist[:,ix]
             
-            for j=1:k
-                x0,y0,r = core_sets[:,j]
+            for i=1:k
+                x0,y0,r = core_sets[:,i]
                 if (x-x0)^2 +(y-y0)^2 < r^2
-                    push!(core_set_ixs[j],ix)
+                    push!(core_set_ixs[i],ix)
                 end
             end
-        end
-        
-        core_set_ixs = unique!.(core_set_ixs)
 
+        end
+        core_set_ixs = unique!.(core_set_ixs)
         return triout,periodic_images,core_set_ixs
     end
 
