@@ -95,7 +95,7 @@ N = numberofpoints(triout)
 dirichlet_boundary_points = vcat(core_set_ixs[1],core_set_ixs[2],core_set_ixs[3])
 home_coreset_points = core_set_ixs[4]
 
-f = open(log_file,"w")
+f = open(output_file,"w")
 println(f,"β=",β)
 println(f,"log_α_min=",log_α_min)
 println(f,"log_α_max=",log_α_max)
@@ -133,7 +133,7 @@ X=triout.pointlist[1,:]
 Y=triout.pointlist[2,:]
 T=triout.trianglelist
 
-f=open(log_file,"a")
+f=open(output_file,"a")
 println(f,"log_α_star=",goat_α)
 println(f,"best_obj=",goat_obj)
 close(f)
