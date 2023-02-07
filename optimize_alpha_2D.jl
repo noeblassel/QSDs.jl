@@ -124,7 +124,6 @@ end
 #println(grad_mask)
 
 M,B,δM,∂λ=build_FEM_matrices_2D(V,β,triout)
-Niter=50
 η0=0.05
 log_α= zeros(Ntri)
 log_α[grad_mask] .= -Inf
