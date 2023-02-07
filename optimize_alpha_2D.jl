@@ -16,6 +16,9 @@ Ny = parse(Int64,ARGS[6])
 
 max_area = parse(Float64,ARGS[7])
 
+log_α_min = parse(Float64,ARGS[8])
+log_α_max = parse(Float64,ARGS[9])
+
 println("Usage: β checkpoint_file output_file Niter Nx Ny max_area")
 
 function opt_alpha!(M,B,δM,∂λ,periodic_images,dirichlet_boundary_points,N_iter,η0,n_line_search,log_α,min_log_α,max_log_α, grad_mask,checkpoint_file)
@@ -91,6 +94,19 @@ Ntri = numberoftriangles(triout)
 N = numberofpoints(triout)
 dirichlet_boundary_points = vcat(core_set_ixs[1],core_set_ixs[2],core_set_ixs[3])
 home_coreset_points = core_set_ixs[4]
+
+f = open(log_file,"w")
+println(f,"β=",β)
+println(f,"log_α_min=",log_α_min)
+println(f,"log_α_max=",log_α_max)
+println(f,"X=",X)
+println(f,"Y=",Y)
+println(f,"T=",T)
+println(f,"periodic_images=",periodic_images)
+println(f,"dirichlet_boundary_points=",dirichlet_boundary_points)
+println(f,"home_coreset_points=",home_coreset_points)
+close(f)
+
 grad_mask=Cint[]
 
 for n=1:Ntri
@@ -111,9 +127,6 @@ log_α[grad_mask] .= -Inf
 
 u1,u2,λ1,λ2,∇λ1,∇λ2=QSDs.soft_killing_grads_2D(M,B,δM,∂λ,log_α,periodic_images,dirichlet_boundary_points)
 
-log_α_min = -10
-log_α_max = 10
-
 goat_α,goat_obj= opt_alpha!(M,B,δM,∂λ,periodic_images,dirichlet_boundary_points,Niter,η0,20,log_α,log_α_min,log_α_max,grad_mask,checkpoint_file)
 
 X=triout.pointlist[1,:]
@@ -121,17 +134,8 @@ Y=triout.pointlist[2,:]
 T=triout.trianglelist
 
 f=open(log_file,"a")
-println(f,"X=",X)
-println(f,"Y=",Y)
-println(f,"T=",T)
-println(f,"periodic_images=",periodic_images)
-println(f,"dirichlet_boundary_points=",dirichlet_boundary_points)
-println(f,"home_coreset_points=",home_coreset_points)
-println(f,"log_α_min=",log_α_min)
-println(f,"log_α_max=",log_α_max)
 println(f,"log_α_star=",goat_α)
 println(f,"best_obj=",goat_obj)
-println(f,"β=",β)
 close(f)
 
 #= log_α_clamped = copy(log_α)
