@@ -7,8 +7,17 @@ include("PlotUtils.jl")
 using .QSDs, .GeometryUtils, Triangulate, LinearAlgebra
 
 β = parse(Float64,ARGS[1])
+
 checkpoint_file = ARGS[2]
 output_file = ARGS[3]
+Niter = parse(Int64,ARGS[4])
+
+Nx = parse(Int64,ARGS[5])
+Ny = parse(Int64,ARGS[6])
+
+max_area = parse(Float64,ARGS[7])
+
+println("Usage: β checkpoint_file output_file Niter Nx Ny max_area")
 
 function opt_alpha!(M,B,δM,∂λ,periodic_images,dirichlet_boundary_points,N_iter,η0,n_line_search,log_α,min_log_α,max_log_α, grad_mask,checkpoint_file)
     Nα = length(log_α)
@@ -77,10 +86,7 @@ n_core_set_boundary = [10,10,10,10]
 Lx = Ly=2.0
 cx,cy = -1.0,-1.0
 
-Nx = 40
-Ny = 40
 
-max_area = 0.002
 min_angle = 20
 triout, periodic_images , core_set_ixs = conforming_triangulation(cx,cy,Lx,Ly,Nx,Ny,core_sets,n_core_set_boundary,max_area,min_angle)
 Ntri = numberoftriangles(triout)
