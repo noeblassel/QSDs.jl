@@ -5,12 +5,14 @@ input_file = "output_alpha.out"
 include(input_file)
 
 V(x,y)= cos(2π*x)-cos(2π*(y-x))
-
+grad_norm_V(x,y) = 2π*sqrt((sin(2π*x)+sin(2π*(y-x)))^2 + sin(2π*(y-x))^2)
 cmap = colormap("RdBu")
 
 pl = plot(aspect_ratio=1,size=(800,800))
 
 (_,Ntri) = size(T)
+log_α_min = -8
+log_α_max = 8
 
 log_α_star[ log_α_star .< log_α_min ] .= log_α_min
 log_α_star[ log_α_star .> log_α_max] .= log_α_max
