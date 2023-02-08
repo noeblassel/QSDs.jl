@@ -15,7 +15,7 @@ Ny = parse(Int64,ARGS[4])
 N_coreset_boundary_points = parse(Int64,ARGS[5])
 
 max_area = parse(Float64,ARGS[6])
-max_iter=parse(Int64,ARGS[7])
+max_iter= parse(Int64,ARGS[7])
 
 println("Usage: β output_file Nx Ny N_coreset_boundary_points max_area max_iter")
 
@@ -55,7 +55,7 @@ function opt_alpha!(M,B,δM,∂λ,periodic_images,dirichlet_boundary_points, gra
         end
     end
     options = Optim.Options(show_every=1,iterations = max_iter,show_trace=true)
-    return optimize(Optim.only_fg!(fg!),x0,LBFGS(),options)
+    return optimize(Optim.only_fg!(fg!),x0,BFGS(),options)
 end
 
 V(x,y)= cos(2π*x)-cos(2π*(y-x))

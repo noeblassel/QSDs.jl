@@ -1,7 +1,7 @@
 module GeometryUtils
     using Triangulate
 
-    export conforming_triangulation
+    export conforming_triangulation, dirichlet_triangulation
 
     """
     Build a triangulation of a given rectangular domain,
@@ -88,6 +88,49 @@ module GeometryUtils
         end
         core_set_ixs = unique!.(core_set_ixs)
         return triout,periodic_images,core_set_ixs
+    end
+
+    """
+    Computes a triangulation of the domain define by the enclosing curve γ defined on [0,1], with Npts dirichlet boundary points on γ([0,1]).
+    returns the triangulation, the indices of dirichlet boundary points, as well as a
+    3 x Npts matrix boundary_triangles of indices of points of the triangulation, where
+    boundary_triangles[1,k], boundary_triangles[2,k] are the points on the boundary and boundary_triangles[3,k] are the inner points.
+    The ordering corresponds to a clockwise orientation.
+    """
+
+    function dirichlet_triangulation(γ,Npts,max_area,min_angle=20;quiet=true)
+        t_range = range(0,1,Npts+1)
+        
+        triin = TriangulateIO()
+        points_in = hcat(γ.(t_range[1:Npts])...)
+        triin.pointlist = points_in
+        ixs = collect(Cint,1:Npts)
+        push!(ixs,1)
+        edges_in = transpose(hcat(ixs[1:Npts],ixs[2:Npts+1]))
+        triin.segmentlist = edges_in
+
+        dirichlet_boundary_points = ixs[1:Npts]
+        flags = (quiet) ? "pq$(min_angle)Da$(max_area)QY" : "pq$(min_angle)Da$(max_area)Y"
+        (triout,vorout) = triangulate(flags,triin)
+
+        Ntri = numberoftriangles(triout)
+
+        boundary_triangles = Vector{Cint}[]
+
+        for n=1:Ntri
+            i,j,k = triout.trianglelist[:,n]
+
+            if (i<=Npts) && (j<=Npts)
+                push!(boundary_triangles,[i,j,k])
+            elseif (j<=Npts) && (k<=Npts)
+                push!(boundary_triangles,[j,k,i])
+            elseif (k<=Npts) && (i<=Npts)
+                push!(boundary_triangles,[k,i,j])
+            end
+
+        end
+
+        return triout, dirichlet_boundary_points, hcat(boundary_triangles...)
     end
 
 end
