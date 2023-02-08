@@ -1,4 +1,4 @@
-using   Plots,Triangulate,LinearAlgebra,TriplotRecipes
+using   Plots,Triangulate,LinearAlgebra,TriplotRecipes, Arpack
 
 include("QSDs.jl")
 
@@ -35,10 +35,13 @@ N = numberofpoints(triout)
 M,B = QSDs.build_FEM_matrices_2D(V,β,triout)
 Mₒ=M[Ω,Ω]
 Bₒ=B[Ω,Ω]
-λs,us=eigen(Mₒ,Bₒ)
+
+λs,us=eigs(Mₒ,Bₒ,nev=20,sigma=0,which=:LR)
+λs=real.(λs)
+us=real.(us)
 
 Z = zeros(N)
-Z[Ω] .= us[:,29]
+Z[Ω] .= us[:,20]
 
 Vs= V.(x,y)
 X = triout.pointlist[1,:]

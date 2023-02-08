@@ -13,7 +13,7 @@ export calc_weights_periodic,
         reverse_bc,
         qsd_2d
 
-    using Cubature, LinearAlgebra, Triangulate
+    using Cubature, Arpack, SparseArrays, LinearAlgebra, Triangulate
 
     Base.length(nothing) = 0 # for convenience
 
@@ -479,8 +479,8 @@ export calc_weights_periodic,
     """
     function build_FEM_matrices_2D(V::Function,β::S,domain::TriangulateIO) where {S<:Real}
         N = numberofpoints(domain)
-        M=zeros(N,N)
-        B=zeros(N,N)
+        M=spzeros(N,N)
+        B=spzeros(N,N)
 
         mus = zeros(N)
 
@@ -490,7 +490,7 @@ export calc_weights_periodic,
         end
 
         T = size(domain.trianglelist)[2]
-        tmp = 0.0
+        tmp_M = tmp_B = 0.0
         tri_areas = zeros(T)
 
         for n=1:T
@@ -514,28 +514,39 @@ export calc_weights_periodic,
             M[k,k] += diag_M_int(xk,yk,xi,yi,xj,yj,μk,μi,μj,Aijk)/β
             B[k,k] += diag_B_int(μk,μi,μj,Aijk)
 
-            tmp = off_diag_M_int(xi,yi,xj,yj,xk,yk,μi,μj,μk,Aijk)/β
-            M[i,j] += tmp
-            M[j,i] += tmp
-            tmp = off_diag_B_int(μi,μj,μk,Aijk)
-            B[i,j] += tmp
-            B[j,i] += tmp
+            tmp_M = off_diag_M_int(xi,yi,xj,yj,xk,yk,μi,μj,μk,Aijk)/β
+            tmp_B = off_diag_B_int(μi,μj,μk,Aijk)
 
+            if i<j
+                M[i,j] += tmp_M
+                B[i,j] += tmp_B
+            else
+                M[j,i] += tmp_M
+                B[j,i] += tmp_B
+            end
+            
+            tmp_M = off_diag_M_int(xj,yj,xk,yk,xi,yi,μj,μk,μi,Aijk)/β
+            tmp_B = off_diag_B_int(μj,μk,μi,Aijk)
 
-            tmp = off_diag_M_int(xj,yj,xk,yk,xi,yi,μj,μk,μi,Aijk)/β
-            M[j,k] += tmp
-            M[k,j] += tmp
-            tmp = off_diag_B_int(μj,μk,μi,Aijk)
-            B[j,k] += tmp
-            B[k,j] += tmp
+            if j<k
+                M[j,k] += tmp_M
+                B[j,k] += tmp_B
+            else
+                M[k,j] += tmp_M
+                B[k,j] += tmp_B
+            end
 
+            tmp_M = off_diag_M_int(xk,yk,xi,yi,xj,yj,μk,μi,μj,Aijk)/β
+            tmp_B = off_diag_B_int(μk,μi,μj,Aijk)
 
-            tmp = off_diag_M_int(xk,yk,xi,yi,xj,yj,μk,μi,μj,Aijk)/β
-            M[i,k] += tmp
-            M[k,i] += tmp
-            tmp = off_diag_B_int(μk,μi,μj,Aijk)
-            B[i,k] += tmp
-            B[k,i] += tmp
+            if i<k
+                M[i,k] += tmp_M
+                B[i,k] += tmp_B
+            else
+                M[k,i] += tmp_M
+                B[k,i] += tmp_B
+            end
+            
 
         end
 
@@ -543,7 +554,7 @@ export calc_weights_periodic,
         B=Symmetric(B)
 
         function δM(α)
-            ΔM = zeros(N,N)
+            ΔM = spzeros(N,N)
             tmp = 0.0
 
             for n=1:T
@@ -559,16 +570,28 @@ export calc_weights_periodic,
                 ΔM[k,k] += α[n] * diag_B_int(μk,μi,μj,Aijk)
 
                 tmp = off_diag_B_int(μi,μj,μk,Aijk)
-                ΔM[i,j] += α[n] * tmp
-                ΔM[j,i] += α[n] * tmp
+
+                if i<j
+                    ΔM[i,j] += α[n] * tmp
+                else
+                    ΔM[j,i] += α[n] * tmp
+                end
 
                 tmp = off_diag_B_int(μj,μk,μi,Aijk)
-                ΔM[j,k] += α[n] * tmp
-                ΔM[k,j] += α[n] * tmp
+
+                if j<k
+                    ΔM[j,k] += α[n] * tmp
+                else
+                    ΔM[k,j] += α[n] * tmp
+                end
 
                 tmp = off_diag_B_int(μk,μi,μj,Aijk)
-                ΔM[i,k] += α[n] * tmp
-                ΔM[k,i] += α[n] * tmp
+
+                if i<k
+                    ΔM[i,k] += α[n] * tmp
+                else
+                    ΔM[k,i] += α[n] * tmp
+                end
 
             end
                 return Symmetric(ΔM)
@@ -598,8 +621,8 @@ export calc_weights_periodic,
     Apply Periodic and Dirichlet boundary conditions to FEM matrices in 2D.
     """
     function apply_bc(M,B,periodic_images,dirichlet_boundary_points)#,dirichlet_boundary_points)
-        Mper = Matrix(M)
-        Bper = Matrix(B)
+        Mper = sparse(M)
+        Bper = sparse(B)
 
         for ix=1:size(periodic_images)[2]
             i,j = periodic_images[:,ix]
@@ -671,7 +694,11 @@ export calc_weights_periodic,
         ΔM = δM(α)
         Lred,Bred=apply_bc(M+ΔM,B,periodic_images,dirichlet_boundary_points)
 
-        λs,us = eigen(Lred,Bred)
+        λs,us = eigs(Lred,Bred,nev=2,sigma=0,which=:LR)
+
+        λs=real.(λs)
+        us=real.(us)
+        
         u1 = reverse_bc(us[:,1],N,periodic_images,dirichlet_boundary_points)
         u2 = reverse_bc(us[:,2],N,periodic_images,dirichlet_boundary_points)
         λ1,λ2 = λs[1:2]

@@ -1,4 +1,4 @@
-using  PyPlot,Triangulate,LinearAlgebra
+using  PyPlot,Triangulate,Arpack
 
 include("QSDs.jl")
 include("GeometryUtils.jl")
@@ -32,7 +32,7 @@ t=triout.trianglelist
 M,B,δM,∂λ = build_FEM_matrices_2D(V,β,triout)
 
 Mred,Bred=apply_bc(M,B,periodic_images,dirichlet_boundary_points)
-λs,us_red=eigen(Mred,Bred)
+λs,us_red=eigs(Mred,Bred,nev=2,sigma=0,which=:LM)
 
 u1= reverse_bc(us_red[:,1],N,periodic_images,dirichlet_boundary_points)
 qsd = qsd_2d(u1,V,β,triout)
