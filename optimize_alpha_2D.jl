@@ -137,16 +137,11 @@ goat_α,goat_obj= opt_alpha!(M,B,δM,∂λ,periodic_images,dirichlet_boundary_po
 f=open(output_file,"a")
 println(f,"log_α_star=",goat_α)
 println(f,"best_obj=",goat_obj)
+
+u1,u2,λ1,λ2,∇λ1,∇λ2 = QSDs.soft_killing_grads_2D(M,B,δM,∂λ,goat_α,periodic_images,dirichlet_boundary_points)
+
+sqsd = QSDs.qsd_2d(u1,V,β,triout)
+println(f,"soft_qsd=",sqsd)
+println(f,"∇λ1=",∇λ1)
+println(f,"∇λ2=",∇λ2)
 close(f)
-
-#= log_α_clamped = copy(log_α)
-
-log_α_clamped[ log_α .< log_α_min] .= log_α_min
-log_α_clamped[ log_α .> log_α_max] .= log_α_max
-
-α = exp.(log_α_clamped)
-
-z_α=PlotUtils.to_vertex_function(α,triout)
-z_α[dirichlet_boundary_points] .= exp(log_α_max)
-
-tripcolor(X,Y,log.(z_α),T,aspectratio=1,size=(800,800)) =#
