@@ -686,28 +686,4 @@ export calc_weights_periodic,
         end
         return (u .* mus)/Z
     end
-    
-    function soft_killing_grads_2D(M,B,δM,∂λ,log_α,periodic_images,dirichlet_boundary_points)
-        N = first(size(M))
-        Nα=length(log_α)
-        α = exp.(log_α)
-        ΔM = δM(α)
-        Lred,Bred=apply_bc(M+ΔM,B,periodic_images,dirichlet_boundary_points)
-
-        λs,us = eigs(Lred,Bred,nev=2,sigma=0,which=:LR)
-
-        λs=real.(λs)
-        us=real.(us)
-        
-        u1 = reverse_bc(us[:,1],N,periodic_images,dirichlet_boundary_points)
-        u2 = reverse_bc(us[:,2],N,periodic_images,dirichlet_boundary_points)
-        λ1,λ2 = λs[1:2]
-
-        ∇λ1 = α .* [∂λ(u1,n) for n=1:Nα]
-        ∇λ2 = α .* [∂λ(u2,n) for n=1:Nα]
-
-        return u1,u2,λ1,λ2,∇λ1,∇λ2
-    end
-
-
 end # module QSDs
