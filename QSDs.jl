@@ -635,7 +635,8 @@ export calc_weights_periodic,
           #  Bper[j,j] -= Bper[i,i] # correct double counting
 
         end
-        N = size(M)[1]
+        
+        N = first(size(M))
 
         reduced_points = Set(vcat(periodic_images[1,:],dirichlet_boundary_points))
         unreduced_points = setdiff(1:N,reduced_points)
