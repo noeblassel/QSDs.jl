@@ -1,30 +1,30 @@
 using Plots, Colors
 
-input_file = "results_alpha_2D/opt_alpha_3.0_test.out"
+input_file = "results_alpha_2D/results_3.0.out"
 
 include(input_file)
 
-V(x,y)= cos(2π*x)-cos(2π*(y-x))
+V(x, y) = cos(2π * x) - cos(2π * (y - x))
 
-function plot_trif(X,Y,f,t,fmin,fmax; crange=colormap("RdBu"),kwargs...)
-    pl =plot(;kwargs...)
+function plot_trif(X, Y, f, t, fmin, fmax; crange=colormap("RdBu"), kwargs...)
+    pl = plot(; kwargs...)
     tmp_f = copy(f)
-    clamp!(tmp_f,fmin,fmax)
-    (_,Ntri) = size(t)
+    clamp!(tmp_f, fmin, fmax)
+    (_, Ntri) = size(t)
 
-    for n=1:Ntri
+    for n = 1:Ntri
 
-        (i,j,k) = T[:,n]
+        (i, j, k) = T[:, n]
 
-        c = crange[1+floor(Int64,(length(crange)-1)*(tmp_f[n]-fmin)/(fmax-fmin))]
+        c = crange[1+floor(Int64, (length(crange) - 1) * (tmp_f[n] - fmin) / (fmax - fmin))]
 
-        plot!(pl,Shape(X[[i,j,k]],Y[[i,j,k]]),label="",fillcolor=c,linecolor=nothing)
+        plot!(pl, Shape(X[[i, j, k]], Y[[i, j, k]]), label="", fillcolor=c, linecolor=nothing)
     end
 
     return pl
 end
 
-function to_trif(u,t)
-    (_,Ntri) = size(t)
-    return [sum(u[t[:,n]])/3 for n=1:Ntri]
+function to_trif(u, t)
+    (_, Ntri) = size(t)
+    return [sum(u[t[:, n]]) / 3 for n = 1:Ntri]
 end

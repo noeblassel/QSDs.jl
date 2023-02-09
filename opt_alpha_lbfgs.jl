@@ -60,7 +60,7 @@ end
 
 V(x,y)= cos(2π*x)-cos(2π*(y-x))
 
-r=0.3
+r=0.2
 
 core_sets = [t->[0.5 + r*cos(2π*t),-0.5 + r*(sin(2π*t)+cos(2π*t))]]
 core_set_tests = [(x,y)->((x-0.5)^2+(x-y-1)^2 < r^2)]
