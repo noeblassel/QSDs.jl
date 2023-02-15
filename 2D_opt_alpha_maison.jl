@@ -3,13 +3,13 @@
 include("QSDs.jl")
 include("GeometryUtils.jl")
 
-using .QSDs, .GeometryUtils, Triangulate, LinearAlgebra
+using .QSDs, .GeometryUtils, Triangulate, LinearAlgebra, Arpack
 
 β = parse(Float64,ARGS[1])
 
 checkpoint_file = ARGS[2]
 output_file = ARGS[3]
-Niter = parse(Int64,ARGS[4])
+max_iter = parse(Int64,ARGS[4])
 
 Nx = parse(Int64,ARGS[5])
 Ny = parse(Int64,ARGS[6])
@@ -17,16 +17,23 @@ Ny = parse(Int64,ARGS[6])
 N_coreset_boundary_points=parse(Int64,ARGS[7])
 
 max_area = parse(Float64,ARGS[8])
+r = parse(Float64,ARGS[9])
 
-log_α_min = parse(Float64,ARGS[9])
-log_α_max = parse(Float64,ARGS[10])
+min_log_α = parse(Float64,ARGS[10])
+max_log_α = parse(Float64,ARGS[11])
 
-println("Usage: β checkpoint_file output_file Niter Nx Ny N_coreset_boundary_points max_area log_α_min log_α_max")
+η0 = parse(Float64,ARGS[12])
+n_line_search = parse(Int64,ARGS[13])
+grad_tol = parse(Float64,ARGS[14])
 
-function opt_alpha!(M,B,δM,∂λ,periodic_images,dirichlet_boundary_points,N_iter,η0,n_line_search,log_α,min_log_α,max_log_α, grad_mask,checkpoint_file)
+
+
+println("Usage: β checkpoint_file output_file Niter Nx Ny N_coreset_boundary_points max_area r log_α_min log_α_max η0 n_line_search grad_tol")
+
+function opt_log_alpha!(M,B,δM,∂λ,periodic_images,dirichlet_boundary_points,N_iter,η0,n_line_search,log_α,min_log_α,max_log_α,grad_mask,checkpoint_file,grad_tol)
     Nα = length(log_α)
-
-    
+    update_ixs = setdiff(1:Nα,grad_mask)
+    N = first(size(M))
     goat_α = copy(log_α)
     goat_obj = -Inf
     
@@ -37,15 +44,28 @@ function opt_alpha!(M,B,δM,∂λ,periodic_images,dirichlet_boundary_points,N_it
 
     for i=0:N_iter
         println("=== Iteration $i ===")
-        u1,u2,λ1,λ2,∇λ1,∇λ2 = QSDs.soft_killing_grads_2D(M,B,δM,∂λ,log_α,periodic_images,dirichlet_boundary_points)
+        α = exp.(log_α)
+        ΔM = δM(α)
+        Lred,Bred = apply_bc(M+ΔM,B,periodic_images,dirichlet_boundary_points)
 
-        obj = best_obj = (λ2-λ1)/λ1
-        ∇obj = (λ1*∇λ2-λ2*∇λ1)/(λ1^2)
-        ∇obj[grad_mask] .= 0 # no update on home core_set
-        println("\t normalized gradient : ", norm(∇obj/Nα))
-        println("\t objective : ", best_obj)
+        us_red,λs_red = eigs(Lred,Bred,nev=2,sigma=0,which=:LR)
+        λ1,λ2 = real.(λs_red)
+
+        u1 = reverse_bc(real.(us_red[:,1]),N,periodic_images,dirichlet_boundary_points)
+        u2 = reverse_bc(real.(us_red[:,2]),N,periodic_images,dirichlet_boundary_points)
+
+        ∇λ1 = [∂λ(u1,i) for i=update_ixs]
+        ∇λ2 = [∂λ(u2,i) for i=update_ixs]
+
+        ∇obj = (λ1*∇λ2 - λ2*∇λ1)/λ1^2
+        ∇obj .*= α[update_ixs]
+        
+        (maximum(abs.(∇obj)) < grad_tol) && (return goat_α,goat_obj) # gradient exit condition
         
         η=η0
+
+        best_obj = (λ2-λ1)/λ1
+        
         for i=1:n_line_search # line search to adjust step size
             println("\t\t step $i, η=$η")
             log_α_tent = log_α + η*∇obj
@@ -68,7 +88,11 @@ function opt_alpha!(M,B,δM,∂λ,periodic_images,dirichlet_boundary_points,N_it
         end
         
         log_α .+= η*∇obj
+
+        saturated_ixs = @.( (log_α < min_log_α) || (log_α > max_log_α))
+        update_ixs = setdiff(update_ixs,saturated_ixs) # don't update parameters which have saturated their constraints
         clamp!(log_α,min_log_α,max_log_α)
+
         log_α[grad_mask] .= -Inf
 
         f=open(checkpoint_file,"w")
@@ -83,19 +107,23 @@ end
 
 V(x,y)= cos(2π*x)-cos(2π*(y-x))
 
-core_sets = [-0.5 0.5 -0.5 0.5 ; -0.5 -0.5 0.5 0.5; 0.05 0.05 0.05 0.05]
-n_core_set_boundary = repeat([N_coreset_boundary_points],size(core_sets)[2])
+r=0.2
+
+core_sets = [t->[0.5 + r*cos(2π*t),-0.5 + r*(sin(2π*t)+cos(2π*t))]]
+core_set_tests = [(x,y)->((x-0.5)^2+(x-y-1)^2 < r^2)]
+
+n_core_set_boundary = fill(N_coreset_boundary_points,length(core_sets))
 
 Lx = Ly=2.0
 cx,cy = -1.0,-1.0
 
 
 min_angle = 20
-triout, periodic_images , core_set_ixs = conforming_triangulation(cx,cy,Lx,Ly,Nx,Ny,core_sets,n_core_set_boundary,max_area,min_angle,quiet=false)
+triout, periodic_images , core_set_ixs = conforming_triangulation(cx,cy,Lx,Ly,Nx,Ny,core_sets,core_set_tests,n_core_set_boundary,max_area,min_angle,quiet=false)
 Ntri = numberoftriangles(triout)
 N = numberofpoints(triout)
-dirichlet_boundary_points = vcat(core_set_ixs[1],core_set_ixs[2],core_set_ixs[3])
-home_coreset_points = core_set_ixs[4]
+dirichlet_boundary_points = Cint[]#vcat(core_set_ixs[1],core_set_ixs[3],core_set_ixs[4])
+home_coreset_points = core_set_ixs[1]
 
 X=triout.pointlist[1,:]
 Y=triout.pointlist[2,:]
@@ -103,11 +131,11 @@ T=triout.trianglelist
 
 f = open(output_file,"w")
 println(f,"β=",β)
-println(f,"log_α_min=",log_α_min)
-println(f,"log_α_max=",log_α_max)
 println(f,"X=",X)
 println(f,"Y=",Y)
 println(f,"T=",T)
+println(f,"N=",N)
+println(f,"Ntri=",Ntri)
 println(f,"periodic_images=",periodic_images)
 println(f,"dirichlet_boundary_points=",dirichlet_boundary_points)
 println(f,"home_coreset_points=",home_coreset_points)
@@ -118,34 +146,41 @@ grad_mask=Cint[]
 for n=1:Ntri
     (i,j,k)=triout.trianglelist[:,n]
     
-    if (i in home_coreset_points) && (j in home_coreset_points) && (k in home_coreset_points)
-        push!(grad_mask,n)
+    for c=1:1
+        if (i in core_set_ixs[c]) && (j in core_set_ixs[c]) && (k in core_set_ixs[c])
+            push!(grad_mask,n)
+        end
     end
 end
 
-#println(grad_mask)
 
 M,B,δM,∂λ=build_FEM_matrices_2D(V,β,triout)
-η0=0.05
-log_α= ones(Ntri)
+log_α = zeros(Ntri)
 log_α[grad_mask] .= -Inf
 
-u1,u2,λ1,λ2,∇λ1,∇λ2=QSDs.soft_killing_grads_2D(M,B,δM,∂λ,log_α,periodic_images,dirichlet_boundary_points)
+goat_alpha,goat_obj = opt_log_alpha!(M,B,δM,∂λ,periodic_images,dirichlet_boundary_points,max_iter,η0,20,log_α,min_log_α,max_log_α,grad_mask,checkpoint_file,1e-8)
+α_star = exp.(goat_alpha)
 
-goat_α,goat_obj= opt_alpha!(M,B,δM,∂λ,periodic_images,dirichlet_boundary_points,Niter,η0,20,log_α,log_α_min,log_α_max,grad_mask,checkpoint_file)
+
+
+Lred,Bred = apply_bc(M+δM(α_star),B,periodic_images,dirichlet_boundary_points)
+λs,us = eigs(Lred,Bred,nev=2,sigma=0,which=:LR)
+λ1,λ2 = real.(λs)
+u1=real.(us[:,1])
+u2=real.(us[:,2])
+u1=reverse_bc(u1,N,periodic_images,dirichlet_boundary_points)
+u2=reverse_bc(u2,N,periodic_images,dirichlet_boundary_points)
+sqsd=qsd_2d(u1,V,β,triout)
+
+#α_star[dirichlet_boundary_points] .= Inf
 
 f=open(output_file,"a")
-println(f,"log_α_star=",goat_α)
-println(f,"best_obj=",goat_obj)
+println(f,"α_star=",α_star)
 
-u1,u2,λ1,λ2,∇λ1,∇λ2 = QSDs.soft_killing_grads_2D(M,B,δM,∂λ,goat_α,periodic_images,dirichlet_boundary_points)
-
-sqsd = QSDs.qsd_2d(u1,V,β,triout)
-println(f,"soft_qsd=",sqsd)
-println(f,"∇λ1=",∇λ1)
-println(f,"∇λ2=",∇λ2)
 println(f,"λ1=",λ1)
 println(f,"λ2=",λ2)
 println(f,"u1=",u1)
 println(f,"u2=",u2)
+println(f,"sqsd=",sqsd)
+
 close(f)

@@ -4,22 +4,25 @@ include("QSDs.jl")
 
 using .QSDs
 
-Nin = 100
-t = range(0,2π,Nin)
-t = t[1:Nin-1]
-x = 16sin.(t).^3
-y = 13cos.(t) - 5cos.(2t) - 2cos.(3t) - cos.(4t)
+Nin = 40
+t = range(0,2π,Nin+1)
+t = t[1:Nin]
+#x = 16sin.(t).^3
+#y = 13cos.(t) - 5cos.(2t) - 2cos.(3t) - cos.(4t)
+
+x = 16sin.(t)
+y = 16cos.(t)
 
 triin = TriangulateIO()
 
 points=transpose(hcat(x,y))
 triin.pointlist = points
-i = collect(Int32,1:Nin-1)
+i = collect(Int32,1:Nin)
 push!(i,Int32(1))
-edges = transpose(hcat(i[1:Nin-1],i[2:Nin]))
+edges = transpose(hcat(i[1:Nin],i[2:Nin+1]))
 triin.segmentlist = edges
 
-max_area = 0.1
+max_area = 0.5
 min_angle = 20
 
 (triout, vorout) = triangulate("pq$(min_angle)Da$(max_area)",triin)
@@ -29,7 +32,7 @@ min_angle = 20
 V(x,y)=0
 β=4.0
 N = numberofpoints(triout)
-dirichlet_boundary = 1:49
+dirichlet_boundary = 1:Nin
 Ω = setdiff(1:N,dirichlet_boundary)
 N = numberofpoints(triout)
 M,B = QSDs.build_FEM_matrices_2D(V,β,triout)
@@ -41,12 +44,10 @@ Bₒ=B[Ω,Ω]
 us=real.(us)
 
 Z = zeros(N)
-Z[Ω] .= us[:,20]
+Z[Ω] .= us[:,11]
 
 Vs= V.(x,y)
 X = triout.pointlist[1,:]
 Y= triout.pointlist[2,:]
 t=triout.trianglelist
 tripcolor(X,Y,Z,t,aspectratio=1,size=(1000,1000),colorbar=:false,showaxis=false,showgrid=false,cmap=:hsv)
-
-

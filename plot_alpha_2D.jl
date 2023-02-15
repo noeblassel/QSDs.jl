@@ -1,6 +1,6 @@
 using Plots, Colors
 
-input_file = "results_alpha_2D/results_3.0.out"
+input_file = "test_log.out"
 
 include(input_file)
 

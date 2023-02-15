@@ -687,4 +687,51 @@ export calc_weights_periodic,
         end
         return (u .* mus)/Z
     end
+
+    function get_boundary_triangles(domain::TriangulateIO,dirichlet_indices)
+        Ntri = numberoftriangles(domain)
+        boundary_trigs = Vector{Cint}[]
+        
+        for n=1:Ntri
+            i,j,k = domain.trianglelist[:,n]
+
+            if (i ∈ dirichlet_indices) && (j ∈ dirichlet_indices)
+                push!(boundary_trigs,Cint[i,j,k])
+            elseif (j∈ dirichlet_indices) && (k ∈ dirichlet_indices)
+                push!(boundary_trigs, Cint[j,k,i])
+            elseif (k ∈ dirichlet_indices) && (i ∈ dirichlet_indices)
+                push!(boundary_trigs , Cint[k,i,j])
+            end
+
+        end
+
+        return boundary_trigs
+    end
+
+    """
+    Computes the exterior normal derivative of u, which is a piecewise affine function on the domain, 
+    defined by its values at each vertex.
+    boundary_triangles is a (3 × M) Int32 - valued array,
+     where boundary_triangles[:,n] = [i,j,k] means that the vertices i and j are succesive vertices on the boundary, oriented clockwise,
+     and vertex k is an interior vertex such that triangle [i,j,k] is in domain.
+     It is assumed u[i] = u[j] = 0.
+    """
+    function sq_normal_derivatives(u,domain::TriangulateIO,boundary_triangles)
+        _, n_boundary_triangles = size(boundary_triangles)
+
+        sq_derivatives = zeros(n_boundary_triangles)
+        for n=1:n_boundary_triangles
+            i,j,k = boundary_triangles[:,n]
+            xi,yi=domain.pointlist[:,i]
+            xj,yj=domain.pointlist[:,j]
+            xk,yk=domain.poitnlist[:,k]
+            Aijk=tri_area(xi,yi,xj,yj,xk,yk)
+            r_ij2 = (xi-xj)^2 + (yi-yj)^2
+            sq_derivatives[n] = 4 * r_ij2 * u[k]^2 / Aijk^2
+
+        end
+
+        return sq_derivatives
+    end
+
 end # module QSDs

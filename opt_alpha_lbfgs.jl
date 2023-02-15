@@ -16,10 +16,11 @@ N_coreset_boundary_points = parse(Int64,ARGS[5])
 
 max_area = parse(Float64,ARGS[6])
 max_iter= parse(Int64,ARGS[7])
+max_α = parse(Float64,ARGS[8])
 
-println("Usage: β output_file Nx Ny N_coreset_boundary_points max_area max_iter")
+println("Usage: β output_file Nx Ny N_coreset_boundary_points max_area max_iter max_α")
 
-function opt_alpha!(M,B,δM,∂λ,periodic_images,dirichlet_boundary_points, grad_mask,Ntri,x0,max_iter)
+function opt_alpha!(M,B,δM,∂λ,periodic_images,dirichlet_boundary_points, grad_mask,Ntri,x0,max_iter,max_α,cons_tol=1e-12)
     update_ixs = setdiff(1:Ntri,grad_mask)
 
     α=zeros(Ntri)
@@ -28,10 +29,10 @@ function opt_alpha!(M,B,δM,∂λ,periodic_images,dirichlet_boundary_points, gra
     ∇λ1 = zeros(Ntri-length(grad_mask))
     ∇λ2 = zeros(Ntri-length(grad_mask))
 
+
     function fg!(f,g,x)
-
-        α[update_ixs] .= (x .^ 2)/2 # optimize square alpha
-
+        α[update_ixs] .= min.(max_α,max.(0,x))
+        
         Lper,Bper = apply_bc(M+δM(α),B,periodic_images,dirichlet_boundary_points)
 
         λs,us = eigs(Lper,Bper,nev=2,sigma=0,which=:LR)
@@ -47,13 +48,17 @@ function opt_alpha!(M,B,δM,∂λ,periodic_images,dirichlet_boundary_points, gra
         ∇λ2 .= [∂λ(u2,i) for i=update_ixs]
 
         if g !== nothing
-            g .= -2x .* (λ1*∇λ2 - λ2*∇λ1)/λ1^2
+            g .= -(λ1*∇λ2 - λ2*∇λ1)/λ1^2
+            g[α[update_ixs] .<= cons_tol] .= 0
+            g[α[update_ixs] .>= max_α - cons_tol] .= 0
         end
 
         if f!== nothing
             return -(λ2 - λ1)/λ1
         end
+
     end
+
     options = Optim.Options(show_every=1,iterations = max_iter,show_trace=true)
     return optimize(Optim.only_fg!(fg!),x0,LBFGS(),options)
 end
@@ -108,15 +113,17 @@ end
 
 
 M,B,δM,∂λ=build_FEM_matrices_2D(V,β,triout)
-x0= ones(Ntri-length(grad_mask))
-Mred,Bred=apply_bc(M,B,periodic_images,dirichlet_boundary_points)
-λs,us=eigs(Mred,Bred,sigma=0,which=:LR)
-results = opt_alpha!(M,B,δM,∂λ,periodic_images,dirichlet_boundary_points, grad_mask,Ntri,x0,max_iter)
+
+x = ones(Ntri-length(grad_mask))
+
+results = opt_alpha!(M,B,δM,∂λ,periodic_images,dirichlet_boundary_points, grad_mask,Ntri,x,max_iter,max_α)
 
 println(results)
 
+x_star = results.minimizer
+
 α_star = zeros(Ntri)
-α_star[setdiff(1:Ntri,grad_mask)] .= (results.minimizer) .^ 2
+α_star[setdiff(1:Ntri,grad_mask)] .= min.(max_α,max.(x_star,0))
 
 
 
