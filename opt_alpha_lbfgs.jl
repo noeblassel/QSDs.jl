@@ -60,7 +60,7 @@ function opt_alpha!(M,B,δM,∂λ,periodic_images,dirichlet_boundary_points, gra
     end
 
     options = Optim.Options(show_every=1,iterations = max_iter,show_trace=true,g_abstol=1e-10,g_reltol=1e-12)
-    return optimize(Optim.only_fg!(fg!),x0,LBFGS(),options)
+    return optimize(Optim.only_fg!( fg!),x0,LBFGS(),options)
 end
 
 V(x,y)= cos(2π*x)-cos(2π*(y-x))
@@ -123,7 +123,7 @@ println(results)
 x_star = results.minimizer
 
 α_star = zeros(Ntri)
-α_star[setdiff(1:Ntri,grad_mask)] .= α_star
+α_star[setdiff(1:Ntri,grad_mask)] .= x_star
 clamp!(α_star,0,max_α)
 
 Lred,Bred = apply_bc(M+δM(α_star),B,periodic_images,dirichlet_boundary_points)
