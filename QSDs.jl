@@ -688,26 +688,6 @@ export calc_weights_periodic,
         return (u .* mus)/Z
     end
 
-    function get_boundary_triangles(domain::TriangulateIO,dirichlet_indices)
-        Ntri = numberoftriangles(domain)
-        boundary_trigs = Vector{Cint}[]
-        
-        for n=1:Ntri
-            i,j,k = domain.trianglelist[:,n]
-
-            if (i ∈ dirichlet_indices) && (j ∈ dirichlet_indices)
-                push!(boundary_trigs,Cint[i,j,k])
-            elseif (j∈ dirichlet_indices) && (k ∈ dirichlet_indices)
-                push!(boundary_trigs, Cint[j,k,i])
-            elseif (k ∈ dirichlet_indices) && (i ∈ dirichlet_indices)
-                push!(boundary_trigs , Cint[k,i,j])
-            end
-
-        end
-
-        return boundary_trigs
-    end
-
     """
     Computes the exterior normal derivative of u, which is a piecewise affine function on the domain, 
     defined by its values at each vertex.
@@ -724,7 +704,7 @@ export calc_weights_periodic,
             i,j,k = boundary_triangles[:,n]
             xi,yi=domain.pointlist[:,i]
             xj,yj=domain.pointlist[:,j]
-            xk,yk=domain.poitnlist[:,k]
+            xk,yk=domain.pointlist[:,k]
             Aijk=tri_area(xi,yi,xj,yj,xk,yk)
             r_ij2 = (xi-xj)^2 + (yi-yj)^2
             sq_derivatives[n] = 4 * r_ij2 * u[k]^2 / Aijk^2

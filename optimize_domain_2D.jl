@@ -59,11 +59,11 @@ function opt_alpha!(M,B,δM,∂λ,periodic_images,dirichlet_boundary_points, gra
 
     end
 
-    options = Optim.Options(show_every=1,iterations = max_iter,show_trace=true,g_abstol=1e-10,g_reltol=1e-12)
+    options = Optim.Options(show_every=1,iterations = max_iter,show_trace=true)
     return optimize(Optim.only_fg!(fg!),x0,LBFGS(),options)
 end
 
-V(x,y)= cos(2π*x)-cos(2π*(y-x))
+V(x,y) = cos(2π*x)-cos(2π*(y-x))
 
 r=0.2
 

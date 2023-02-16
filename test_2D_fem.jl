@@ -1,35 +1,25 @@
 using   Plots,Triangulate,LinearAlgebra,TriplotRecipes, Arpack
 
 include("QSDs.jl")
+include("GeometryUtils.jl")
 
-using .QSDs
+using .QSDs, .GeometryUtils
 
-Nin = 40
+Nin = 1000
 t = range(0,2π,Nin+1)
 t = t[1:Nin]
 #x = 16sin.(t).^3
 #y = 13cos.(t) - 5cos.(2t) - 2cos.(3t) - cos.(4t)
 
-x = 16sin.(t)
-y = 16cos.(t)
+x = 16cos.(-t)
+y = 16sin.(-t)
 
-triin = TriangulateIO()
+γ(t) = [16*cos(2π*t),16*sin(2π*t)]
 
-points=transpose(hcat(x,y))
-triin.pointlist = points
-i = collect(Int32,1:Nin)
-push!(i,Int32(1))
-edges = transpose(hcat(i[1:Nin],i[2:Nin+1]))
-triin.segmentlist = edges
+triout, dirichlet_boundary_points,boundary_triangles = dirichlet_triangulation(γ,Nin,0.1)
 
-max_area = 0.5
-min_angle = 20
-
-(triout, vorout) = triangulate("pq$(min_angle)Da$(max_area)",triin)
-
-#V(x,y)= 0.1*(x^4+2y^4) + 0.01((x-1)^4 + (y-2)^4)
-#V(x,y)= sin(x) +3cos(2y)
 V(x,y)=0
+
 β=4.0
 N = numberofpoints(triout)
 dirichlet_boundary = 1:Nin
@@ -44,10 +34,12 @@ Bₒ=B[Ω,Ω]
 us=real.(us)
 
 Z = zeros(N)
-Z[Ω] .= us[:,11]
+Z[Ω] .= us[:,2]
 
 Vs= V.(x,y)
 X = triout.pointlist[1,:]
 Y= triout.pointlist[2,:]
 t=triout.trianglelist
-tripcolor(X,Y,Z,t,aspectratio=1,size=(1000,1000),colorbar=:false,showaxis=false,showgrid=false,cmap=:hsv)
+
+η = QSDs.sq_normal_derivatives(Z,triout,boundary_triangles)
+plot(η[sortperm(boundary_triangles[1,:])])
