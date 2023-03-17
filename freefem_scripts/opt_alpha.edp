@@ -1,0 +1,186 @@
+load "ff-NLopt"
+
+func string f(int i, int len){
+  string ss = i;
+  int nn = ss.length; 
+  for(int i=0;i<len-nn;i++)
+    ss = "0"+ss;
+  return ss;
+}
+
+// Physics
+real beta = 10.0;
+func U = cos(2*pi*x)-cos(2*pi*(y-x));
+
+// Geometry
+
+int n = 5;
+
+real[int] rs = [0.1,0.1,0.1,0.1];
+
+real[int] corex = [-0.5,-0.5,0.5,0.5];
+real[int] corey = [-0.5,0.5,-0.5,0.5];
+int[int] inout = [-16*n,-16*n,16*n,-16*n];
+
+//int[int] gradmask = [1,1,0,1];
+
+border top(t=1,-1){x=t; y=1; label=1;};
+border left(t=1,-1){x=-1; y=t; label=2;};
+border bottom(t=-1,1){x=t ; y=-1; label=3;};
+border right(t=-1,1){x=1 ; y=t; label=4;};
+
+
+border cores(t=0,2*pi; i){x = corex[i]+rs[i]*cos(t); y = corey[i]+rs[i]*(sin(t)+cos(t)); label=4+i+1;};
+mesh Th = buildmesh(top(16*n) + right(16*n) + bottom(16*n) + left(16*n)+ cores(inout));
+// Th = adaptmesh(Th,U,periodic=[[1,x],[3,x],[2,y],[4,y]],err=1e-3);
+int homecore = Th(corex[2],corey[2]).region;
+
+fespace Vh(Th, P1, periodic=[[1,x],[3,x],[2,y],[4,y]]);
+fespace VP0h(Th,P0,periodic=[[1,x],[3,x],[2,y],[4,y]]);
+
+real Zh = int2d(Th)(exp(-beta * U(x,y)));
+Vh muh = exp(-beta * U(x,y)) /  Zh;
+
+
+real obj,s;
+
+
+// opt
+real maxLr = 1e-4;
+real minLr = 1e-15;
+real optv = 0.0;
+real mulLr = 1.2;
+real divLr = 0.8;
+real lr = 1e-12;
+
+ofstream objhist("objhist.txt");
+
+int iter=0;
+int maxIter=1000;
+
+real[int] gradLambda1(Th.nt);
+real[int] gradLambda2(Th.nt);
+real[int] gradObj(Th.nt);
+
+real[int] alpha(Th.nt);
+int[int] gradmask(Th.nt);
+
+alpha = 1.0;
+Vh Uh = U;
+
+
+// masking
+for(int i=0;i<Th.nt;i++){
+  if((Th[i].region == homecore)){
+    alpha[i]=0;
+    gradmask[i]=0;
+  }
+  else{
+    gradmask[i]=1;
+  }
+}
+
+VP0h falpha= alpha[nuTriangle];
+
+varf aAlpha(u,v) = int2d(Th)((dx(u)*dx(v) + dy(u)*dy(v) + alpha[nuTriangle]*u*v)*muh)
+                + on(5,6,8, u = 0);
+
+varf a(u,v) = int2d(Th)(dx(u)*dx(v) + dy(u)*dy(v))
+                + on(5,6,8, u = 0);
+varf alph(u,v) = int2d(Th)(u*v*alpha[nuTriangle]*muh);//+ on(5,6,8, u = 0);
+
+varf b(u,v) = int2d(Th)(u*v*muh);    
+matrix A = a(Vh,Vh);
+
+matrix Alph = alph(Vh,Vh);
+matrix M = aAlpha(Vh,Vh);
+
+matrix Mtilde = A + Alph;
+
+matrix B = b(Vh,Vh);
+matrix dM = b(VP0h,VP0h);
+int nev=5;
+real[int] ev(nev);
+Vh[int] eV(nev);
+
+int k = EigenValue(M,B,sym=true,sigma=0.0,value=ev,vector=eV,tol=1e-15);
+real Zhnu = int2d(Th)(eV[0](x,y)*muh(x,y));
+Vh nuh = eV[0]*muh/Zhnu;
+
+plot(falpha,wait=true,fill=true);
+
+for(int j=0;j<nev;j++) plot(eV[j],wait = true,fill=true,cmm="u"+j,value=true);
+plot(nuh,wait = true,fill=true);
+
+cout << eV[0][][1] << endl;
+
+real[int] u1 = eV[0][];
+real[int] u2 = eV[1][];
+
+cout << B.n <<" "<< B.m << endl;
+
+cout << u1.n << endl;
+
+cout << int2d(Th)(eV[0]*eV[0]*muh)<< " "<<int2d(Th)(eV[1]*eV[1]*muh) << endl ;
+
+for(int t=0;t<Th.nt;t++){
+  gradLambda1[t] = int2d(Th,t)(eV[0]*eV[0]*muh);
+  gradLambda2[t] = int2d(Th,t)(eV[1]*eV[1]*muh);
+}
+
+//gradObj = (ev[0]*gradLambda2 - ev[1]*gradLambda1)*(ev[0]^-2);
+
+//normGrad = sqrt((gradObj .* gradObj).sum);
+
+VP0h fgradl1 = gradLambda2[nuTriangle];
+
+plot(fgradl1,wait=true,fill=true);
+//cout << int2d(Th[10])(x)<<endl;
+// while(iter < maxIter){
+
+
+
+
+//   real Zhnu = int2d(Th)(eV[0](x,y)*muh(x,y));
+//   Vh nuh = eV[0]*muh/Zhnu;
+
+//   // cout << "l1 = " << ev[0] << " ; l2 = " << ev[1] <<endl;
+//   // cout << "obj = " << (ev[1]-ev[0])/ev[0]<<endl;
+
+//   Vh u;
+//   for(int i=0;i<4;i++){
+//     Vh thetax = 4*(x-corex[i])+2*(y-corey[i]);
+//     Vh thetay = 2*(x-corex[i]+y-corey[i]);
+
+//     u = eV[0];
+//     gradLambda1[i] = -gradmask[i]*int1d(Th,4+i+1)((dx(u)*N.x + dy(u)*N.y)^2 * muh * (thetax*N.x + thetay*N.y))/beta;
+
+//     u = eV[1];
+//     gradLambda2[i] = -gradmask[i]*int1d(Th,4+i+1)((dx(u)*N.x + dy(u)*N.y)^2 * muh * (thetax*N.x + thetay*N.y))/beta;
+
+//   } // local shape perturbations like gradient of Hessian;
+
+//   gradObj = (ev[0]*gradLambda2 - ev[1]*gradLambda1);
+//   gradObj *= ev[0]^-2;
+
+//   s=0;
+
+//   for(int i=1;i<4;i++) s+=gradObj[i]^2;
+
+//   obj = (ev[1]-ev[0])/ev[0];
+
+//   if(obj > optv){
+//     rs += lr*gradObj;
+//     cout << "Iteration: "<<iter<<", lr: "<< lr<<", obj: "<<obj<<", |grad|: "<<sqrt(s)<<endl;
+//     objhist<< obj <<","<< endl;
+//     objhist.flush();
+//     lr *= mulLr;
+//     iter++;
+//     plot(Th);
+//   }
+//   else{
+//     lr *= divLr;
+//     if(lr < minLr) break;
+//   }
+
+// }

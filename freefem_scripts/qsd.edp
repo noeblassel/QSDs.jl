@@ -1,0 +1,29 @@
+bool debug = true;
+
+real sigma = 0;
+real beta = 4.;
+int nev = 20;
+
+mesh Th = square(20,20,[pi*x,pi*y]);
+fespace Vh(Th,P2);
+Vh u1,u2;
+
+varf a(u1,u2)=
+    int2d(Th)(dx(u1)*dx(u2)+dy(u1)*dy(u2)) + on(1,2,3,4,u1=0);
+
+varf b([u1],[u2])=int2d(Th)(u1*u2);
+
+matrix A = a(Vh,Vh, solver = Crout, factorize=1);
+matrix B = b(Vh,Vh, solver = CG,eps=1e-20);
+
+real[int] ev(nev);
+real[int] eV(nev);
+
+int k = EigenValue(A, B, sym=true, sigma=sigma, value=ev, vector=eV, tol=1e-10, maxit=0, ncv=0);
+
+cout << k << "eigenvalues have converged." << endl;
+
+for(int i=0; i< k; i++){
+    u1 = eV[i];
+    plot(eV[i],wait=debug,fill=true);
+}
