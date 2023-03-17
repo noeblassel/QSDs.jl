@@ -1,0 +1,163 @@
+func string padint(int i, int len){ // pad int to given length with zeros
+  string ss = i;
+  int nn = ss.length; 
+  for(int i=0;i<len-nn;i++)
+    ss = "0"+ss;
+  return ss;
+}
+
+
+// io and algorithmic parameters
+real deltaMesh = 1./200; // mesh fineness parameter
+int maxiter = 250; // max optim iterations
+int nev=2; // number of eigvals
+real lr = 1e-7; // initial learning rate
+real lrdecay = 0.9;
+real lrmin = 1e-15;
+bool debug=false;
+
+
+string meshpath = "./meshes/";
+string impath = "./img/";
+
+
+
+// physical parameters
+real beta;
+cout << "Enter beta: " << endl;
+cin >> beta;
+
+ofstream objhist("./hists/objhist_holed_"+beta+".out");
+ofstream gradhist("./hists/gradhist_holed_"+beta+".out");
+ofstream l1hist("./hists/l1hist_holed_"+beta+".out");
+ofstream l2hist("./hists/l2hist_holed_"+beta +".out");
+
+func U = cos(2*pi*x)-cos(2*pi*(y-x));
+    // computation of normalizing constant Z
+    mesh cell = square(100,100,[-1.0 + 2*x, -1.0 + 2*y]); // mesh of "full" periodic cell
+    fespace cellV(cell,P2);
+    cellV mutilde =exp(-beta*U(x,y));
+    real Z = int2d(cell)(mutilde);
+    cout << "Z = " + Z << endl;
+
+    cellV Ucell = U;
+    plot(Ucell, wait=true,fill=true);
+
+func mu = exp(-beta * U(x,y)) / Z;
+
+// geometry
+
+
+int n = 20;
+
+real[int] rs = [0.15,0.15,0.15];
+
+real[int] corex = [-0.5,-0.5,0.5];//,0.5];
+real[int] corey = [-0.5,0.5,-0.5];//,0.5];
+int[int] inout = [-n,-n,-n];//,-16*n];
+
+//int[int] gradmask = [1,1,0,1];
+
+border top(t=1,-1){x=t; y=1; label=1;};
+border left(t=1,-1){x=-1; y=t; label=2;};
+border bottom(t=-1,1){x=t ; y=-1; label=3;};
+border right(t=-1,1){x=1 ; y=t; label=4;};
+
+
+border cores(t=0,2*pi; i){x = corex[i]+rs[i]*cos(t); y = corey[i]+rs[i]*(sin(t)+cos(t)); label=5;};
+mesh Th = buildmesh(top(n) + right(n) + bottom(n) + left(n)+ cores(inout));
+//Th = adaptmesh(Th,deltaMesh,IsMetric=true,periodic = [[1,x],[3,x],[2,y],[4,y]]); // initial refinement of mesh;
+plot(Th,wait=true);
+
+// FE spaces and variables
+
+fespace Vh(Th,P1,periodic = [[1,x],[3,x],[2,y],[4,y]]); // for eigenproblem
+fespace Vhvec(Th,[P1,P1],periodic = [[1,x],[3,x],[2,y],[4,y]]); // for shape perturbations
+
+Vh Uh = U; // interpolated potential
+Vh muh = mu; // interpolated mu 
+
+// plot(Uh,value=true,fill=true,wait=true,boundary=true,dim=3);
+// plot(muh,value=true,fill=true,wait=true,boundary=true,dim=3);
+
+varf a(u,v) = int2d(Th)((dx(u)*dx(v)+dy(u)*dy(v))*mu) + on(5,u=0); // variational lhs for weighted Dirichlet eigenproblem
+varf b(u,v) = int2d(Th)(u*v*mu); // variational rhs
+
+matrix A,B ;  // fem matrices
+
+real[int] evalues(nev); // eigenvalues
+Vh[int] evectors(nev); // eigenvectors
+
+Vhvec [thetax,thetay] , [wx,wy]; // shape gradient extension variables
+
+int iter = 0;
+real grad;
+
+mesh Thold;
+real optJ = 0.;
+real J;
+
+while(iter < maxiter){
+   A = a(Vh,Vh);
+   B = b(Vh,Vh);
+
+   int k = EigenValue(A,B,sym=true,sigma=0.0,value=evalues,vector=evectors,tol=1e-15); // compute eigenvalues
+    J = (evalues[1]-evalues[0]) / evalues[0];
+    cout << "Iteration "<< iter<< " : J = " + J << endl;
+    cout << grad <<endl;
+    cout << lr << endl;
+
+    if (J > optJ){
+      optJ = J;
+
+      l1hist << evalues[0]<<endl;
+      l2hist << evalues[1] << endl;
+      objhist << (evalues[1]-evalues[0]) / evalues[0] << endl;
+
+      if(evectors[0](0.5,0.5) < 0) evectors[0] = -evectors[0];
+
+      plot(evectors[0],value=true,fill=true,wait=debug,boundary=true,ps = impath + "/lambda1_hole/" + padint(iter,4) +".eps" );
+      plot(evectors[1],value=true,fill=true,wait=debug,boundary=true,ps = impath + "/lambda2_hole/" + padint(iter,4) +".eps" );
+      plot(Uh,value=true,fill=true,wait=debug,boundary=true,ps = impath + "/V_hole/" + padint(iter,4) +".eps" );
+      plot(Th,boundary=true,ps=impath + "/meshes_hole/" +padint(iter,4) + ".eps");
+      func phi =   evalues[1]*(dx(evectors[0])*N.x + dy(evectors[0])*N.y)^2 
+                  - evalues[0]*(dx(evectors[1])*N.x + dy(evectors[1])*N.y)^2
+                  ; // shape gradient, defined on the boundary -- up to direction
+
+      grad = int1d(Th,5)(phi^2*muh);
+
+      gradhist << grad << endl;
+      
+      problem extension([thetax,thetay],[wx,wy]) = int2d(Th)(dx(thetax)*dx(wx) + dy(thetax)*dy(wx) + dx(thetay)*dx(wy)+dy(thetay)*dy(wy)
+                                                          + thetax*wx + thetay*wy)
+                                              -int1d(Th,5)(phi*(wx*N.x + wy*N.y));
+
+      extension;
+
+      // plot(Th,wait= debug);
+
+      Th = movemesh(Th,[x+lr*thetax,y+lr*thetay]);
+      savemesh(Th,meshpath + padint(iter,4)+".msh");
+      Uh = U;
+    //plot(Uh,fill=true,wait=debug,value=true,dim=3);
+
+      iter++;
+
+      l1hist.flush;
+      l2hist.flush;
+      objhist.flush;
+      gradhist.flush;
+
+      Thold = Th;
+      lr = lr / lrdecay;
+    }
+    else{
+      Th = Thold;
+      lr = lr * lrdecay;
+    }
+
+    if(lr < lrmin) break;
+}
+
+plot(Uh,fill=true,wait=true);
+savemesh(Th,"final_holed_"+beta+".msh");

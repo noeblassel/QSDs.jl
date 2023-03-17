@@ -1,0 +1,51 @@
+
+
+func U = cos(2*pi*x)-cos(2*pi*(y-x));
+mesh Th;
+
+matrix A,B ;  // fem matrices
+int k;
+
+
+while(1){
+    cout << "Enter beta :" << endl;
+    int beta;
+    cin >> beta;
+
+    
+    mesh cell = square(100,100,[-1.0 + 2*x, -1.0 + 2*y]); // mesh of "full" periodic cell
+    fespace cellV(cell,P2);
+    cellV mutilde =exp(-beta*U(x,y));
+    real Z = int2d(cell)(mutilde);
+    func mu = exp(-beta * U(x,y))/Z;
+
+    varf a(u,v) = int2d(Th)((dx(u)*dx(v)+dy(u)*dy(v))*mu) + on(1,u=0); // variational lhs for weighted Dirichlet eigenproblem
+    varf b(u,v) = int2d(Th)(u*v*mu); // variational rhs
+
+    int nev = 2;
+    real[int] evalues(nev); // eigenvalues
+
+    mesh Th = readmesh("./meshes/final_conn_"+beta+".msh");
+    //plot(Th,wait=true);
+    
+    fespace Vh(Th,P1);
+    
+    // Vh[int] evectors(nev); // eigenvectors
+
+    // A = a(Vh,Vh);
+    // B= b(Vh,Vh);
+
+    // k = EigenValue(A,B,sym=true,sigma=0.0,value=evalues,vector=evectors,tol=1e-15);
+    
+    Vh Uh= U;
+    //plot(Th,wait=true,cmm="Optimal domain, beta="+beta);
+    plot(Uh,fill=true,wait=true,cmm="Potential, beta="+beta,value=true,ps = "optdomains/"+beta+".eps");
+
+    // Th = readmesh("./meshes/final_conn_"+beta+".5.msh");
+    
+    // // fespace Vh(Th,P1);    
+    // // Vh Uh= U;
+    // plot(Uh,fill=true,wait=true,cmm="Potential, beta="+beta+".5",value=true,ps = "optdomains/"+beta+".5.eps");
+    // // plot(evectors[0],fill=true,wait=true,cmm="First eigenvalue, beta="+beta);
+    // // plot(evectors[1],fill=true,wait=true,cmm="Second eigenvalue, beta="+beta);
+}
