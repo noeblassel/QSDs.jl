@@ -26,9 +26,9 @@ while(1){
     real[int] evalues(nev); // eigenvalues
 
     mesh Th = readmesh("./meshes/final_conn_"+beta+".msh");
+    fespace Vh(Th,P1);
     //plot(Th,wait=true);
     
-    fespace Vh(Th,P1);
     
     // Vh[int] evectors(nev); // eigenvectors
 

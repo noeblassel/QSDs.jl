@@ -1,0 +1,63 @@
+real beta;
+cout << "Enter beta: " << endl;
+cin >> beta;
+
+// io and algorithmic parameters
+real nMesh = 200; // mesh fineness parameter
+int maxiter = 500; // max optim iterations
+real lr = 1e-10; // initial learning rate
+real lrmin = 1e-15;
+real lrdecay = 0.9;
+bool debug=false;
+real alpha=sqrt(3)/4;
+
+string meshpath = "./meshes/";
+
+mesh Th = readmesh("./meshes/final_conn_"+beta+".msh");
+plot(Th,wait=1);
+cout << Th.nt << endl;
+
+func U = cos(2*pi*x)-cos(2*pi*(y-x));
+
+mesh cell = square(100,100,[-1.0 + 2*x, -1.0 + 2*y]); // mesh of "full" periodic cell
+fespace cellV(cell,P2);
+cellV mutilde =exp(-beta*U(x,y));
+real Z = int2d(cell)(mutilde);
+cout << "Z = " + Z << endl;
+func mu = exp(-beta * U(x,y)) / Z;
+
+// cellV Ucell = U;
+
+ofstream output("conv.out");
+
+int nev = 2;
+real[int] evalues(nev); // eigenvalues
+
+
+for(real i=5e-3;i<0.5;i*=1.1){
+    mesh gTh = adaptmesh(Th,i,IsMetric=true,iso=true,nbvx=100000);
+    plot(gTh);
+    fespace gVh(gTh,P1);
+
+    varf a(u,v) = int2d(gTh)((dx(u)*dx(v)+dy(u)*dy(v))*mu) + on(1,u=0); // variational lhs for weighted Dirichlet eigenproblem
+    varf b(u,v) = int2d(gTh)(u*v*mu); // variational rhs
+
+
+
+    matrix A,B ;  // fem matrices
+    gVh[int] evectors(nev); // eigenvectors
+
+    A = a(gVh,gVh);
+    B = b(gVh,gVh);
+    int k = EigenValue(A,B,sym=true,sigma=0.0,value=evalues,vector=evectors,tol=1e-15);
+
+    output << gTh.nt << " " << evalues[0] << " "<< evalues[1] << endl;
+}
+
+
+// varf a(u,v) = int2d(Th)((dx(u)*dx(v)+dy(u)*dy(v))*mu) + on(1,u=0); // variational lhs for weighted Dirichlet eigenproblem
+// varf b(u,v) = int2d(Th)(u*v*mu); // variational rhs
+
+
+
+// Vh qsd = evectors[0]*

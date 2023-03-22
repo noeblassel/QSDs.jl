@@ -8,14 +8,16 @@ func string padint(int i, int len){ // pad int to given length with zeros
 
 
 // io and algorithmic parameters
-real nMesh = 300; // mesh fineness parameter
+real nBoundary = 300; // number of points on boundary
+real eps = 2e-3;
 int maxiter = 500; // max optim iterations
 int nev=2; // number of eigvals
 real lr = 1e-10; // initial learning rate
 real lrmin = 1e-15;
-real lrdecay = 0.9;
+real lrdecay = 0.5;
 bool debug=false;
 real alpha=sqrt(3)/4;
+real gamma = 1.0; // regularization parameter
 
 string meshpath = "./meshes/";
 string impath = "./img/";
@@ -50,9 +52,9 @@ func mu = exp(-beta * U(x,y)) / Z;
 real r0 = 0.3, corex = -0.5, corey = 0.5;
 border dOmega(t=0,2*pi){x = corex+r0*cos(t); y = corey+r0*(sin(t)+cos(t)); label=1;};
 
-mesh Th = buildmesh(dOmega(nMesh));
-//Th = adaptmesh(Th,alpha/nMesh^2,IsMetric=true); // initial refinement of mesh;
-
+mesh Th = buildmesh(dOmega(nBoundary));
+Th = adaptmesh(Th,eps,IsMetric=true,iso=true,nbvx=100000);
+plot(Th,wait = 1);
 
 // FE spaces and variables
 
@@ -112,7 +114,7 @@ while(iter < maxiter){
 
       gradhist << grad << endl;
       
-      problem extension([thetax,thetay],[wx,wy]) = int2d(Th)(dx(thetax)*dx(wx) + dy(thetax)*dy(wx) + dx(thetay)*dx(wy)+dy(thetay)*dy(wy)
+      problem extension([thetax,thetay],[wx,wy]) = int2d(Th)(gamma*(dx(thetax)*dx(wx) + dy(thetax)*dy(wx) + dx(thetay)*dx(wy)+dy(thetay)*dy(wy))
                                                           + thetax*wx + thetay*wy)
                                               -int1d(Th,1)(phi*(wx*N.x + wy*N.y));
 
@@ -120,8 +122,13 @@ while(iter < maxiter){
 
       plot([thetax,thetay],wait= debug,boundary=true,value=true,ps = impath + "/theta/" + padint(iter,4)+".eps");
 
-      Th = movemesh(Th,[x+lr*thetax,y+lr*thetay]);
-      savemesh(Th,meshpath + padint(iter,4)+".msh");
+      if(checkmovemesh(Th,[x+lr*thetax,y+lr*thetay]))
+        Th = movemesh(Th,[x+lr*thetax,y+lr*thetay]);
+      else
+        Th = adaptmesh(Th,eps,IsMetric=true,iso=true,nbvx=100000);
+
+
+      //savemesh(Th,meshpath + padint(iter,4)+".msh");
       Uh = U;
     //plot(Uh,fill=true,wait=debug,value=true,dim=3);
 
