@@ -44,7 +44,7 @@ func U = cos(2*pi*x)-cos(2*pi*(y-x));
     cout << "Z = " + Z << endl;
 
     cellV Ucell = U;
-    plot(Ucell, wait=true,fill=true);
+   // plot(Ucell, wait=true,fill=true);
 
 func mu = exp(-beta * U(x,y)) / Z;
 
@@ -120,7 +120,7 @@ while(iter < maxiter){
 
       extension;
 
-      plot([thetax,thetay],wait= debug,boundary=true,value=true,ps = impath + "/theta/" + padint(iter,4)+".eps");
+      plot([thetax,thetay],boundary=true,value=true,ps = impath + "/theta/" + padint(iter,4)+".eps");
 
       if(checkmovemesh(Th,[x+lr*thetax,y+lr*thetay]))
         Th = movemesh(Th,[x+lr*thetax,y+lr*thetay]);
