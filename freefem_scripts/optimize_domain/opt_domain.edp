@@ -55,7 +55,6 @@ border dOmega(t=0,2*pi){x = corex+r0*cos(t); y = corey+r0*(sin(t)+cos(t)); label
 
 mesh Th = buildmesh(dOmega(nBoundary));
 Th = adaptmesh(Th,eps,IsMetric=true,iso=true,nbvx=100000);
-plot(Th,wait = 1);
 
 // FE spaces and variables
 
@@ -102,9 +101,9 @@ while(iter < maxiter){
 
       if(evectors[0](corex,corey) < 0) evectors[0] = -evectors[0];
 
-      plot(evectors[0],value=true,fill=true,wait=debug,boundary=true,ps = impath + "/lambda1/" + padint(iter,4) +".eps" );
-      plot(evectors[1],value=true,fill=true,wait=debug,boundary=true,ps = impath + "/lambda2/" + padint(iter,4) +".eps" );
-      plot(Uh,value=true,fill=true,wait=debug,boundary=true,ps = impath + "/V/" + padint(iter,4) +".eps" );
+      plot(evectors[0],value=true,fill=true,boundary=true,ps = impath + "/lambda1/" + padint(iter,4) +".eps" );
+      plot(evectors[1],value=true,fill=true,boundary=true,ps = impath + "/lambda2/" + padint(iter,4) +".eps" );
+      plot(Uh,value=true,fill=true,boundary=true,ps = impath + "/V/" + padint(iter,4) +".eps" );
       plot(Th,boundary=true,ps=impath + "/meshes/" +padint(iter,4) + ".eps");
 
       func phi =   evalues[1]*(dx(evectors[0])*N.x + dy(evectors[0])*N.y)^2 
@@ -151,5 +150,5 @@ while(iter < maxiter){
     if( lr < lrmin) break;
 }
 
-plot(Uh,fill=true,wait=true);
+plot(Uh,fill=true);
 savemesh(Th,"./meshes/final_conn_"+beta+".msh");
