@@ -6,28 +6,29 @@ func string padint(int i, int len){ // pad int to given length with zeros
   return ss;
 }
 
+cout << "parameters are in args.in -- Format : " << endl;
+cout << "   nBoundary (number of points on boundary)"<<endl;
+cout << "   eps (mesh fineness parameter)"<<endl;
+cout << "   maxiter (maximum number of optimization iterations)"<<endl;
+cout << "   lr (initial learning rate)"<<endl;
+cout << "   lrmin (exit criterion on learning rate)"<<endl;
+cout << "   lrdecay (decay parameter on learning rate)" <<endl;
+cout << "   gamma (shape gradient regularization parameter)" <<endl;
+cout << "   beta (inverse temperature)"<<endl;
+
+ifstream args("args.in");
 
 // io and algorithmic parameters
-real nBoundary = 300; // number of points on boundary
-real eps = 2e-3;
-int maxiter = 500; // max optim iterations
-int nev=2; // number of eigvals
-real lr = 1e-10; // initial learning rate
-real lrmin = 1e-15;
-real lrdecay = 0.5;
-bool debug=false;
-real alpha=sqrt(3)/4;
-real gamma = 1.0; // regularization parameter
+real eps,lr,lrmin,lrdecay,gamma,beta;
+int nBoundary, maxiter;
+
+args >> nBoundary >> eps >> maxiter >> lr >> lrmin >> lrdecay >> gamma >> beta;
 
 string meshpath = "./meshes/";
 string impath = "./img/";
 
 
-
-// physical parameters
-real beta;
-cout << "Enter beta: " << endl;
-cin >> beta;
+int nev=2; // number of eigvals
 
 ofstream objhist("./hists/objhist_"+beta+".out");
 ofstream gradhist("./hists/gradhist_"+beta+".out");
