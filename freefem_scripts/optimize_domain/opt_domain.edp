@@ -87,6 +87,8 @@ real J;
 while(iter < maxiter){
    A = a(Vh,Vh);
    B = b(Vh,Vh);
+   set(A,solver=sparsesolver);
+   set(B,solver=sparsesolver);
 
    int k = EigenValue(A,B,sym=true,sigma=0.0,value=evalues,vector=evectors,tol=1e-15); // compute eigenvalues
     J = (evalues[1]-evalues[0]) / evalues[0];
