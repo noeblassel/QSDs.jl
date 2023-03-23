@@ -81,7 +81,7 @@ int iter = 0;
 real grad;
 
 mesh Thold;
-real optJ = tgv;
+real optJ = 1e30;
 real J;
 
 while(iter < maxiter){
