@@ -114,7 +114,7 @@ while(iter < maxiter){
                   - evalues[1]*(dx(evectors[0])*N.x + dy(evectors[0])*N.y)^2) / (beta*evalues[1]^2)
                   ; // shape gradient, defined on the boundary -- up to direction
 
-      func du1 = ((dx(evectors[1])*N.x + dy(evectors[1])*N.y)^2) * mu ;
+      func du1 = ((dx(evectors[0])*N.x + dy(evectors[0])*N.y)^2) * mu ;
       func du2 = ((dx(evectors[1])*N.x + dy(evectors[1])*N.y)^2) * mu ;
 
       grad = int1d(Th,1)(phi^2*muh);
