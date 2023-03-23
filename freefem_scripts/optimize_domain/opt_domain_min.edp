@@ -30,10 +30,12 @@ string impath = "./img/";
 
 int nev=2; // number of eigvals
 
-ofstream objhist("./hists/objhist_"+beta+"_min.out");
-ofstream gradhist("./hists/gradhist_"+beta+"_min.out");
-ofstream l1hist("./hists/l1hist_"+beta+"_min.out");
-ofstream l2hist("./hists/l2hist_"+beta +"_min.out");
+ofstream objhist("./hists/objhist_"+beta+".out");
+ofstream gradhist("./hists/gradhist_"+beta+".out");
+ofstream l1hist("./hists/l1hist_"+beta+".out");
+ofstream l2hist("./hists/l2hist_"+beta +".out");
+ofstream du1hist("./hists/u1normhist_"+beta+".out");
+ofstream du2hist("./hists/u2normhist_"+beta+".out");
 
 func U = cos(2*pi*x)-cos(2*pi*(y-x));
     // computation of normalizing constant Z
@@ -78,13 +80,13 @@ Vh[int] evectors(nev); // eigenvectors
 Vhvec [thetax,thetay] , [wx,wy]; // shape gradient extension variables
 
 int iter = 0;
-real grad;
+real grad,du1_norm,du2_norm;
 
 mesh Thold;
 real optJ = 1e30;
 real J;
 
-while(iter < maxiter){
+while(iter < maxiter){  
    A = a(Vh,Vh);
    B = b(Vh,Vh);
    set(A,solver=sparsesolver);
@@ -109,12 +111,19 @@ while(iter < maxiter){
       plot(Th,boundary=true,ps=impath + "/meshes/" +padint(iter,4) + ".eps");
 
       func phi =   (evalues[0]*(dx(evectors[1])*N.x + dy(evectors[1])*N.y)^2 
-                  - evalues[1]*(dx(evectors[0])*N.x + dy(evectors[0])*N.y)^2) / evalues[1]^2
+                  - evalues[1]*(dx(evectors[0])*N.x + dy(evectors[0])*N.y)^2) / (beta*evalues[1]^2)
                   ; // shape gradient, defined on the boundary -- up to direction
 
+      func du1 = ((dx(evectors[1])*N.x + dy(evectors[1])*N.y)^2) * mu ;
+      func du2 = ((dx(evectors[1])*N.x + dy(evectors[1])*N.y)^2) * mu ;
+
       grad = int1d(Th,1)(phi^2*muh);
+      du1_norm = int1d(Th,1)(du1);
+      du2_norm = int1d(Th,1)(du2);
 
       gradhist << grad << endl;
+      du1hist << du1_norm << endl;
+      du2hist << du2_norm << endl;
       
       problem extension([thetax,thetay],[wx,wy]) = int2d(Th)(gamma*(dx(thetax)*dx(wx) + dy(thetax)*dy(wx) + dx(thetay)*dx(wy)+dy(thetay)*dy(wy))
                                                           + thetax*wx + thetay*wy)
