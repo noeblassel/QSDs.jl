@@ -120,7 +120,6 @@ while(iter < maxiter){
       grad = int1d(Th,1)(phi^2*mu);
       du1norm = int1d(Th,1)(du1);
       du2norm = int1d(Th,1)(du2);
-      Zboundary = int1d(Th,1)(mu);
 
       gradhist << grad << endl;
       du1hist << du1norm << endl;
