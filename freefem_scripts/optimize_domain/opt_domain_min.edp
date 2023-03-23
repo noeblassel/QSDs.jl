@@ -149,6 +149,8 @@ while(iter < maxiter){
       l2hist.flush;
       objhist.flush;
       gradhist.flush;
+      du1hist.flush;
+      du2hist.flush;
 
       Thold = Th;
       lr = lr / lrdecay;
