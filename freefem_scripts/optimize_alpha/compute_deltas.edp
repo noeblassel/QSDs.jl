@@ -1,0 +1,94 @@
+real beta = 10.0;
+func U = cos(2*pi*x)-cos(2*pi*(y-x));
+
+// Geometry
+
+int n = 1;
+real eps = 0.25;
+
+real[int] rs = [0.04,0.04,0.04,0.04];
+
+real[int] corex = [-0.5,-0.5,0.5,0.5];
+real[int] corey = [-0.5,0.5,-0.5,0.5];
+int[int] inout = [-16*n,-16*n,16*n,-16*n];
+
+//int[int] gradmask = [1,1,0,1];
+
+border top(t=1,-1){x=t; y=1; label=1;};
+border left(t=1,-1){x=-1; y=t; label=2;};
+border bottom(t=-1,1){x=t ; y=-1; label=3;};
+border right(t=-1,1){x=1 ; y=t; label=4;};
+
+
+border cores(t=0,2*pi; i){x = corex[i]+rs[i]*cos(t); y = corey[i]+rs[i]*(sin(t)+cos(t)); label=4+i+1;};
+mesh Th = buildmesh(top(16*n) + right(16*n) + bottom(16*n) + left(16*n)+ cores(inout));
+Th = adaptmesh(Th,eps,IsMetric=true,iso=true,nbvx=100000,periodic = [[1,x],[3,x],[2,y],[4,y]]);
+int homecore = Th(corex[2],corey[2]).region;
+
+fespace Vh(Th, P1, periodic=[[1,x],[3,x],[2,y],[4,y]]);
+fespace VP0h(Th,P0,periodic=[[1,x],[3,x],[2,y],[4,y]]);
+
+real Zh = int2d(Th)(exp(-beta * U(x,y)));
+func mu = exp(-beta * U(x,y)) /  Zh;
+
+varf a(u,v) = int2d(Th)((dx(u)*dx(v) + dy(u)*dy(v))*mu) + on(5,6,8, u = 0);
+matrix A = a(Vh,Vh);
+
+varf b(u,v) = int2d(Th)(u*v*mu);
+matrix B = b(Vh,Vh);
+
+
+set(A,solver=sparsesolver);
+set(B,solver=sparsesolver);
+
+int nev=2;
+real[int] ev(nev);
+Vh[int] eV(nev);
+
+int nConverged = EigenValue(A,B,sym=true,sigma=0.0,value=ev,vector=eV,tol=1e-15);
+
+plot(eV[0],wait=true,value=true,fill=true);
+plot(eV[1],wait=true,value=true,fill=true);
+Vh muh = mu;
+plot(muh,wait=true,value=true,fill=true);
+Vh nu = muh*eV[0];
+plot(nu,wait=true,value=true,fill=true);
+
+
+int i,j,k;
+Vh phii,phij,phik;
+
+real[int] deltas(6*Vh.nt);
+
+savemesh(Th,"./meshes/mesh_"+beta+".msh");
+
+for(int t = 0; t < Vh.nt; t++){
+  if(t%10 == 0) cout << t << "/" << Vh.nt << endl;
+  phii = 0.0;
+  phij = 0.0;
+  phik = 0.0;
+
+  i = Vh(t,0);
+  j = Vh(t,1);
+  k = Vh(t,2);
+
+  phii[][i] = 1.0;
+  phij[][j] = 1.0;
+  phik[][k] = 1.0;
+
+  deltas[6*t] = int2d(Th)(phii*phii*mu*(nuTriangle==t));
+  deltas[6*t+1] = int2d(Th)(phii*phij*mu*(nuTriangle==t));
+  deltas[6*t+2] = int2d(Th)(phii*phik*mu*(nuTriangle==t));
+  deltas[6*t+3] = int2d(Th)(phij*phij*mu*(nuTriangle==t));
+  deltas[6*t+4] = int2d(Th)(phij*phik*mu*(nuTriangle==t));
+  deltas[6*t+5] = int2d(Th)(phik*phik*mu*(nuTriangle==t));
+  
+}
+
+
+ofstream deltaFile("./deltas/deltas_"+beta+".out");
+
+for(int n=0;n<6*Vh.nt;n++){
+    deltaFile << deltas[n] << endl;
+}
+

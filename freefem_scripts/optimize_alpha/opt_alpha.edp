@@ -1,0 +1,166 @@
+load "ff-NLopt"
+
+func string f(int i, int len){
+  string ss = i;
+  int nn = ss.length; 
+  for(int i=0;i<len-nn;i++)
+    ss = "0"+ss;
+  return ss;
+}
+
+// Physics
+real beta = 10.0;
+func U = cos(2*pi*x)-cos(2*pi*(y-x));
+
+// Geometry
+real[int] corex = [-0.5,-0.5,0.5,0.5];
+real[int] corey = [-0.5,0.5,-0.5,0.5];
+
+
+mesh Th = readmesh("./meshes/mesh_" + beta+".msh");
+
+int homecore = Th(corex[2],corey[2]).region;
+
+fespace Vh(Th, P1, periodic=[[1,x],[3,x],[2,y],[4,y]]);
+fespace VP0h(Th,P0,periodic=[[1,x],[3,x],[2,y],[4,y]]);
+
+real Zh = int2d(Th)(exp(-beta * U(x,y)));
+func mu = exp(-beta * U(x,y)) /  Zh;
+
+ofstream objhist("objhist.txt");
+
+real[int] gradLambda1(Th.nt);
+real[int] gradLambda2(Th.nt);
+real[int] gradObj(Th.nt);
+
+real[int] theta(Th.nt);
+int[int] gradmask(Th.nt);
+
+Vh Uh = U;
+real theta0 = 5.3;
+theta = theta0;
+ifstream deltaFile("./deltas/deltas_"+beta+".out");
+
+// masking
+for(int t=0;t<Th.nt;t++){
+  if((Th[t].region == homecore)){
+    //theta[t]=-16.0;
+    gradmask[t]=1;
+  }
+  else{
+    gradmask[t]=1;
+  }
+}
+varf a(u,v) = int2d(Th)((dx(u)*dx(v) + dy(u)*dy(v))*mu) + on(5,6,8, u = 0);
+matrix A = a(Vh,Vh);
+
+varf b(u,v) = int2d(Th)(u*v*mu);
+matrix B = b(Vh,Vh,solver = CG, eps=1e-20);
+
+//set(B,solver=sparsesolver);
+
+matrix Alpha,M;
+
+int i,j,k;
+Vh phii,phij,phik;
+
+real[int] deltas(6*Vh.nt);
+
+for(int n = 0; n < 6*Vh.nt; n++){
+  deltaFile >> deltas[n];
+}
+
+int nev=2;
+real[int] ev(nev);
+Vh[int] eV(nev);
+
+
+real[int] u1(Vh.ndof);
+real[int] u2(Vh.ndof);
+
+func real J(real[int] &X){
+  varf alpha(u,v) = int2d(Th)(u*v*exp(X[nuTriangle])*mu); // optimize for the log of the killing rate
+  Alpha = alpha(Vh,Vh);
+  M = A + Alpha;
+  set(M,solver=sparsesolver);
+
+  int nConverged = EigenValue(M,B,sym=true,sigma=0.0 ,value=ev,vector=eV,tol=1e-20,which="LM");
+  VP0h falpha = exp(X[nuTriangle]);
+  cout << (ev[1]-ev[0])/ev[0] << endl;
+  plot(falpha,wait=false,fill=true,value=true);
+  
+  return log(ev[0])- log(ev[1]);
+
+}
+
+func real[int] dJ(real[int] &X){
+  real[int] grad(X.n);
+
+  varf alpha(u,v) = int2d(Th)(u*v*exp(X[nuTriangle])*mu); 
+  Alpha = alpha(Vh,Vh);
+  M = A + Alpha;
+  set(M,solver=sparsesolver);
+
+  int nConverged = EigenValue(M,B,sym=true,sigma=0.0,value=ev,vector=eV,tol=1e-20,which="LM");
+
+  u1 = eV[0][];
+  u2 = eV[1][];
+
+  real dLambda1, dLambda2;
+
+  for(int t=0;t<Vh.nt;t++){
+      i = Vh(t,0);
+      j = Vh(t,1);
+      k = Vh(t,2);
+
+
+      // gradients of eigenvalues with respect to killing rate
+      dLambda1 = deltas[6*t]*u1[i]*u1[i] + 2*deltas[6*t+1]*u1[i]*u1[j]+ 2 * deltas[6*t+2]*u1[i]*u1[k] + deltas[6*t+3]*u1[j]*u1[j] + 2*deltas[6*t+4]*u1[j]*u1[k]+deltas[6*t+5]*u1[k]*u1[k];
+      dLambda2 = deltas[6*t]*u2[i]*u2[i] + 2*deltas[6*t+1]*u2[i]*u2[j]+ 2 * deltas[6*t+2]*u2[i]*u2[k] + deltas[6*t+3]*u2[j]*u2[j] + 2*deltas[6*t+4]*u2[j]*u2[k]+deltas[6*t+5]*u2[k]*u2[k];
+
+      // gradients of log(lambda1/lambda2) with respect to log(killing rate)
+      grad[t] = exp(X[t])*gradmask[t]*(dLambda1*ev[1]-dLambda2*ev[0])/(ev[1]*ev[0]);
+  }
+
+  return grad;
+}
+
+
+real opt = nloptLBFGS(J,theta,grad=dJ,stopRelXTol=1e-30,stopRelFTol=1e-30,nGradStored=30) ;
+
+varf alpha(u,v) = int2d(Th)(u*v*exp(theta[nuTriangle])*mu); 
+Alpha = alpha(Vh,Vh);
+M = A + Alpha;
+set(M,solver=sparsesolver);
+
+int nConverged = EigenValue(M,B,sym=true,sigma=0.0,value=ev,vector=eV,tol=1e-15,which="LM");
+VP0h falpha = exp(theta[nuTriangle]);
+cout << "Objective :" << (ev[1]-ev[0]) / ev[0] << endl;
+plot(falpha,wait=false,fill=true,value=true);
+
+
+real alphamax = exp(10.0);
+VP0h falphav = min(alphamax,exp(theta[nuTriangle]));
+// clamp
+
+plot(falphav,value=true,wait=true,fill=true);
+
+ofstream optAlpha("./alpha_stars/alpha_star_"+beta+".out");
+
+
+for(int i=0;i<Vh.nt;i++)
+  optAlpha << min(alphamax,exp(theta[nuTriangle])) << endl;
+
+Alpha = alpha(Vh,Vh);
+M = A + Alpha;
+set(M,solver=sparsesolver);
+
+nConverged = EigenValue(M,B,sym=true,sigma=0.0,value=ev,vector=eV,tol=1e-15);
+
+cout << "Final objective: " << (ev[1]-ev[0])/ev[0] << endl;
+
+cout << "Lambda 1 : " << ev[0] << endl;
+cout << "Lambda 2 : " << ev[1] << endl;
+
+plot(eV[0],fill=true,wait=true,value=true);
+plot(eV[1],fill=true,wait=true,value=true);
