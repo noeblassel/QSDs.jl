@@ -401,8 +401,8 @@ export calc_weights_periodic,
     function build_FEM_matrices_1D_Neumann(V::Function,β::S,domain::AbstractVector{T}) where {S<:Real,T<:Real}
         N=length(domain)
 
-        M=zeros(N,N)
-        B=zeros(N,N)
+        M=spzeros(N,N)
+        B=spzeros(N,N)
 
         mus = exp.(-β*V.(domain))
     
@@ -432,7 +432,7 @@ export calc_weights_periodic,
         B = Symmetric(B)
 
         function δM(α)
-            ΔM = zeros(N,N)
+            ΔM = spzeros(N,N)
             for i=2:N-1
                 ΔM[i,i] = α[i-1]*(domain[i]-domain[i-1])*(mus[i-1]/12+mus[i]/4) + α[i]*(domain[i+1]-domain[i])*(mus[i]/4+mus[i+1]/12)
                 ΔM[i,i+1] = ΔM[i+1,i] = α[i]*(domain[i+1]-domain[i])*(mus[i]+mus[i+1])/12
@@ -655,7 +655,7 @@ export calc_weights_periodic,
         reduced_points = Set(vcat(periodic_images[1,:],dirichlet_boundary_points))
         unreduced_points=setdiff(1:N,reduced_points)
         u = zeros(N)
-        u[unreduced_points] = u_reduced
+        u[unreduced_points] .= u_reduced
 
         for ix=1:size(periodic_images)[2]
             i,j = periodic_images[:,ix]
