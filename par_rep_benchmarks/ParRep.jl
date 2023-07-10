@@ -1,115 +1,66 @@
 module ParRep
 
-export Replica,
-    ParRepAlgorithm
+    export GenParRepAlgorithm
 
-using Random
+    using Random, Statistics
 
-    mutable struct Replica{X,H}
-        state::X
-        gr_history::H # for equilibrium diagnostic
-    end
-
-    mutable struct ParRepAlgorithm{X,T,H,K,E,R,L,U,S,B}
-
-        # hyperparameters
-        N_rep::Uint32
-
-        state_check_freq::Uint32 # frequency of state determination
-        eq_check_freq::Uint32 # frequency of equilibriation diagnostic
-        killing_check_freq::Uint32 # frequency of killing criterion check
+    mutable struct GenParRepAlgorithm{S,D,P,M,B,L,X,R,K}
+        N::Int #number of replicas
 
         # algorithm parameters
-        dt::T # simulation timestep
-        rng::R
-        equilibrium_diagnostic::E
-        killing_criterion::K
-        update_microstate!::U
-        get_macrostate::S # a method to compute the macrostate. (Should return Uint32 or nothing)
-        branch_replica!::B # a method to branch replicas
-        logger::P # a logger for diagnoses and recording of exit events / state to state dynamics
+        simulator::S # a method to evolve the microscopic dynamics
+
+        dephasing_checker::P # an object to check if replicas have dephased
+        state_checker::M # an object to check the macrostate
+        replica_killer::K # an object to kill the replicas
+
+        logger::L
 
         # Internal variables
 
-        reference_walker::Replica{X,H}
-        replicas::Vector{Replica{X,H}}
+        reference_walker::X
+        replicas::Vector{X}
 
-        cpu_clock_ticks::Uint64
-        wall_clock_ticks::Uint64
-        physical_time::T
+        n_initialisation_ticks::Int # number of simulation steps in initialisation step
+        n_dephasing_ticks::Int # number of simulation steps in dephasing step
+        n_parallel_ticks::Int # number of (parallel) simulation steps in parallel step
 
-        macrostate::Union{Nothing,Uint32}
+        rng::R
     end
 
-
-    """
-    A Generalized Parallel Dynamics algorithm. Keyword arguments:
-        - N_replicas : the number of replicas of the system
-        - state_check_freq = 1 : the frequency at which the state of each replica is resolved
-        - eq_check_freq = 1 : the frequency at which convergence to local equilibrium is assessed
-        - killing_check_freq = 1 : the frequency at which the occurence of an exit event is checked
-        - dt : the timestep of the simulation
-        - rng = Random.GLOBAL_RNG : the pseudo-random number generator
-        - equilibrium_diagnostic : A function with a method equilibrium_diagnostic(replicas::Vector{Replica{X,H}},dephasing_clock::T) returning true or false
-        - killing_criterion : A function with a method killing_criterion(replica::Replica{X,H},current_state::X,dt::T,rng) returning true or false
-        - update_microstate! : A function with methods update_microstate!(replica::Replica{X,H},dt::T,rng,gr_log_step::Bool)
-        - get_macrostate : A function with a method get_macrostate(replica::Replica{X,H},current_state)::Union{Nothing,Uint32}
-        - branch_replica! : A function with methods branch_replica!(source::Replica{X,H},dest::Replica{X,H},copy_hist::Bool)
-        - logger : A logger (todo)
-        - reference_walker : The initial state of the system represented by a Replica::{X,T,H}.
-    """
-    function ParRepAlgorithm(;N_replicas,
-        state_check_freq=1,
-        eq_check_freq=1,
-        killing_check_freq=1,
-        dt,
-        rng=Random.GLOBAL_RNG,
-        equilibrium_diagnostic,
-        killing_criterion,
-        update_microstate!,
-        get_macrostate,
-        branch_replica!,
-        logger,
-        reference_walker)
-
-        return ParRepAlgorithm(N_replicas,state_check_freq,eq_check_freq,killing_check_freq,dt,rng,equilibrium_diagnostic,killing_criterion,update_microstate!,get_macrostate,branch_replica!,logger,reference_walker,typeof(reference_walker)[],0,0,zero(dt),nothing)
+    function GenParRepAlgorithm(;N,simulator,dephasing_checker,state_checker,replica_brancher,logger,reference_walker,rng=GLOBAL_RNG)
+        return GenParRepAlgorithm(N,simulator,dephasing_checker,state_checker,replica_brancher,logger,reference_walker,typeof(reference_walker)[],0,0,0,rng)
     end
 
-    function simulate!(alg::ParRepAlgorithm, simulation_time::T) where {T}
-        initial_state = alg.get_macrostate(alg.reference_walker,initial_state)
-        killed_ixs = Uint32[]
-        while alg.physical_clock <= simulation_time
+    function simulate!(alg::GenParRepAlgorithm, simulation_time)
+        current_state = get_state(alg.state_checker,alg.reference_walker,nothing)
+        killed_ixs = Int[]
+
+        sim_ticks = 0
+
+        while sim_ticks < simulation_time
 
             ## === INITIALISATION PHASE ===
-            initialization_step = 0
+            initialisation_step = 0
 
-            while initial_state === nothing
-                alg.update_microstate!(alg.reference_walker,alg.dt,alg.rng,false)
-
-                alg.cpu_clock_ticks += 1
-                alg.wall_clock_ticks += 1
-
-                alg.physical_time += alg.dt
-
-                if initialization_step % alg.state_check_freq == 0
-                    initial_state = alg.get_macrostate(alg.reference_walker,initial_state)
-                end
-
-                initialization_step += 1
+            while current_state === nothing
+                update_state!(alg.reference_walker,alg.simulator;rng=alg.rng)
+                current_state = get_state(alg.state_checker,current_state,initialization_step)
+                initialization_step +=1
             end
 
-            ## === DEPHASING/DECORRELATION PHASE ===
+            alg.n_initialisation_ticks += initialization_step
+
+            ## === DECORRELATION/DEPHASING === 
             for i=1:alg.N_rep
-                replica = branch_replica!(alg.reference_walker,false)
-                push!(replica,alg.replicas)
+                push!(alg.replicas,copy(alg.reference_walker))
             end
             
             has_dephased = false
-
             dephasing_step = 0
 
             while !has_dephased
-                alg.update_microstate!(alg.reference_walker,alg.dt,alg.rng,false)
+                update_state!(alg.reference_walker,alg.simulator;rng=alg.rng)
 
                 alg.cpu_clock_ticks += 1
                 alg.wall_clock_ticks += 1
@@ -118,38 +69,28 @@ using Random
                 empty!(killed_ixs)
 
                 # check if reference_walker has escaped
+                is_killed = check_death(alg.replica_killer,dephasing_step,alg.reference_walker,current_state,alg.rng)
+                (is_killed) && break
 
-                if dephasing_step % alg.killing_check_freq == 0
-                    is_killed = alg.killing_criterion(alg.reference_walker,initial_state,alg.dt,alg.rng)
-                    (is_killed) && break # reference walker escaped before succesful decorrelation
+                for i=1:alg.N # to parallelize in production
+                    update_state!(alg.replicas[i],alg.simulator;rng=alg.rng)
+                    check_death(alg.replica_killer,dephasing_step,alg.replicas[i],current_state,alg.rng) && push!(i,killed_ixs)
                 end
 
-                for i=1:alg.N_rep # to parallelize in production
-                    alg.update_microstate!(alg.replicas[i],alg.dt,alg.rng, dephasing_step % alg.eq_check_freq == 0) # store gr_observables if this is an equilibriation check step
-                    alg.cpu_clock_ticks += 1
-
-                    if (dephasing_step % alg.kiling_check_freq ==0) && (alg.killing_criterion(alg.replicas[i],initial_state,alg.dt,alg.rng))
-                        push!(killed_ixs,i)
-                     end
-                end
-
-                alg.wall_clock_ticks += 1
+                dephasing_ticks += 1
 
                 survivors = setdiff(1:alg.N_rep,killed_ixs)
 
                 if length(survivors)==0
-                    println("Error: total extinction event.")
-                    return 1
+                    ErrorException("Extinction event! All replicas have been killed")
                 end
-
-                # branch killed replicas
+                
+                
                 for i=killed_ixs
-                    branch_replica!(alg.replicas[rand(alg.rng,survivors)],alg.replicas[i],true)
+                    alg.replicas[i] = alg.replicas[rand(alg.rng,survivors)]
                 end
-
-                if (dephasing_step % alg.eq_check_freq == 0)
-                    has_dephased = alg.equilibrium_diagnostic(alg.replicas,dephasing_step * alg.dt)
-                end
+                
+                has_dephased = check_dephasing(alg.dephasing_checker,alg.replicas,dephasing_step)
 
             end
 
@@ -162,13 +103,14 @@ using Random
 
                 while !killed
                     for i=1:alg.N_rep
-                        alg.update_microstate!(alg.replicas[i],alg.dt,alg.rng,false)
+                        update_state!(alg.replicas[i],alg.simulator;rng=alg.rng)
                         alg.cpu_clock_ticks += 1
                         
-                        if (parallel_step % alg.killing_check_freq == 0) && (alg.killing_criterion(alg.replicas[i],initial_state,alg.dt,alg.rng))
+                        if check_death(alg.replica_killer,alg.replicas[i],current_state,alg.rng)
                             killed = true
-                            alg.reference_walker = branch_replica!(alg.replicas[i],alg.reference_walker,false) # set reference walker to escaped replica
-                            escape_time = (alg.N_rep * parallel_step +i)*sim.dt
+                            alg.reference_walker = branch_replica!(alg.replica_brancher,alg.replicas[i],alg.reference_walker) # set reference walker to escaped replica
+                            escape_time = (alg.N_rep * parallel_step +i)
+                            empty!(alg.replicas)
                             break
                         end
                     end
@@ -177,8 +119,9 @@ using Random
                     alg.wall_clock_ticks += 1
                 end
 
-                alg.physical_clock += escape_time
+                sim_ticks += escape_time
             end
         end
     end
+
 end
