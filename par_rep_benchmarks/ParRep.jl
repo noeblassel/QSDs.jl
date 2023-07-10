@@ -14,7 +14,7 @@ module ParRep
         state_checker::M # an object to check the macrostate
         replica_killer::K # an object to kill the replicas
 
-        logger::L
+        logger::L # to log characteristics of the trajectory
 
         # Internal variables
 
