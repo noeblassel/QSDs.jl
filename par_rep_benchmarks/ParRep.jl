@@ -2,57 +2,57 @@ module ParRep
 
     export GenParRepAlgorithm
 
-    using Random, Statistics
+    using Random, Base.Threads
 
-    mutable struct GenParRepAlgorithm{S,D,P,M,B,L,X,R,K}
+    Base.@kwdef mutable struct GenParRepAlgorithm{S,P,M,K,R,X}
         N::Int #number of replicas
 
         # algorithm parameters
         simulator::S # a method to evolve the microscopic dynamics
 
         dephasing_checker::P # an object to check if replicas have dephased
-        state_checker::M # an object to check the macrostate
+        macrostate_checker::M # an object to check the macrostate
         replica_killer::K # an object to kill the replicas
 
-        logger::L # to log characteristics of the trajectory
+        # logger::L # to log characteristics of the trajectory
 
         # Internal variables
 
+        rng::R = Random.default_rng()
         reference_walker::X
-        replicas::Vector{X}
+        replicas::Vector{X} = typeof(reference_walker)[]
 
-        n_initialisation_ticks::Int # number of simulation steps in initialisation step
-        n_dephasing_ticks::Int # number of simulation steps in dephasing step
-        n_parallel_ticks::Int # number of (parallel) simulation steps in parallel step
-
-        rng::R
+        n_initialisation_ticks::Int=0 # number of calls to simulator in the initialisation step
+        n_dephasing_ticks::Int=0 # number of (parallel) calls to the simulator in the dephasing/decorrelation step
+        n_parallel_ticks::Int=0 # number of (parallel) simulation steps in parallel step
+        n_transitions::Int=0 # number of observed transitions
+        simulation_time::Int=0 # simulation time -- in number of equivalent steps of the DNS Markov chain
     end
 
-    function GenParRepAlgorithm(;N,simulator,dephasing_checker,state_checker,replica_brancher,logger,reference_walker,rng=GLOBAL_RNG)
-        return GenParRepAlgorithm(N,simulator,dephasing_checker,state_checker,replica_brancher,logger,reference_walker,typeof(reference_walker)[],0,0,0,rng)
-    end
-
-    function simulate!(alg::GenParRepAlgorithm, simulation_time)
-        current_state = get_state(alg.state_checker,alg.reference_walker,nothing)
+    function simulate!(alg::GenParRepAlgorithm, n_transitions)
+        current_macrostate = get_macrostate!(alg.macrostate_checker,alg.reference_walker,nothing)
         killed_ixs = Int[]
 
-        sim_ticks = 0
-
-        while sim_ticks < simulation_time
-
+        while alg.n_transitions < n_transitions
             ## === INITIALISATION PHASE ===
-            initialisation_step = 0
+            initialization_step = 0
 
-            while current_state === nothing
-                update_state!(alg.reference_walker,alg.simulator;rng=alg.rng)
-                current_state = get_state(alg.state_checker,current_state,initialization_step)
+            while current_macrostate === nothing
+                # println("initialising --- iteration $(initialization_step)")
+                update_microstate!(alg.reference_walker,alg.simulator)
+                # println("\treference walker: ",alg.reference_walker)
+                alg.n_simulation_ticks += 1
+                current_macrostate = get_macrostate!(alg.macrostate_checker,alg.reference_walker,current_macrostate)
                 initialization_step +=1
             end
+            # println("Succesfully initialised in state ",current_macrostate)
 
             alg.n_initialisation_ticks += initialization_step
+            alg.simulation_time += initialization_step
 
             ## === DECORRELATION/DEPHASING === 
-            for i=1:alg.N_rep
+            empty!(alg.replicas)
+            for i=1:alg.N
                 push!(alg.replicas,copy(alg.reference_walker))
             end
             
@@ -60,68 +60,101 @@ module ParRep
             dephasing_step = 0
 
             while !has_dephased
-                update_state!(alg.reference_walker,alg.simulator;rng=alg.rng)
-
-                alg.cpu_clock_ticks += 1
-                alg.wall_clock_ticks += 1
-                alg.physical_time += sim.dt
-
+                dephasing_step += 1
+                # println("Dephasing --- iteration $(dephasing_step)")
+                update_microstate!(alg.reference_walker,alg.simulator)
+                ref_macrostate = get_macrostate!(alg.macrostate_checker,alg.reference_walker,current_macrostate)
+                if check_death(alg.replica_killer,ref_macrostate,current_macrostate,alg.rng)
+                     current_macrostate = ref_macrostate
+                    # println("\tReference walker has crossed to state $(current_macrostate)")
+                    print("Q")
+                    alg.n_transitions += 1
+                    break
+                end
+                # println("\treference walker: ",alg.reference_walker)
                 empty!(killed_ixs)
-
                 # check if reference_walker has escaped
-                is_killed = check_death(alg.replica_killer,dephasing_step,alg.reference_walker,current_state,alg.rng)
-                (is_killed) && break
 
-                for i=1:alg.N # to parallelize in production
-                    update_state!(alg.replicas[i],alg.simulator;rng=alg.rng)
-                    check_death(alg.replica_killer,dephasing_step,alg.replicas[i],current_state,alg.rng) && push!(i,killed_ixs)
+
+                @threads for i=1:alg.N # to parallelize in production
+                    update_microstate!(alg.replicas[i],alg.simulator)
+                    rep_macrostate = get_macrostate!(alg.macrostate_checker,alg.replicas[i],current_macrostate)
+
+                    if check_death(alg.replica_killer,rep_macrostate,current_macrostate,alg.rng)
+                        push!(killed_ixs,i)
+                        # println("\t\tReplica $i crossed to state $(rep_macrostate)")
+                    end
+
                 end
 
-                dephasing_ticks += 1
+                survivors = setdiff(1:alg.N,killed_ixs)
 
-                survivors = setdiff(1:alg.N_rep,killed_ixs)
+                # println("\t$(length(killed_ixs)) replicas have been killed")
 
                 if length(survivors)==0
-                    ErrorException("Extinction event! All replicas have been killed")
+                    throw(DomainError("Extinction event!"))
                 end
                 
-                
-                for i=killed_ixs
-                    alg.replicas[i] = alg.replicas[rand(alg.rng,survivors)]
+                @threads for i=killed_ixs
+                    alg.replicas[i] = copy(alg.replicas[rand(alg.rng,survivors)])
                 end
                 
-                has_dephased = check_dephasing(alg.dephasing_checker,alg.replicas,dephasing_step)
+                has_dephased = check_dephasing!(alg.dephasing_checker,alg.replicas,current_macrostate,dephasing_step)
 
+                # Obar = sum(alg.dephasing_checker.means;dims = 2) / alg.N
+                # numerator = sum(@. (alg.dephasing_checker.sq_means -2alg.dephasing_checker.means*Obar + Obar^2);dims=2)
+                # denominator = sum(alg.dephasing_checker.sq_means - alg.dephasing_checker.means .^ 2;dims=2)
+                # println("\tGelman-Rubin diagnoses: ",numerator./denominator)
             end
 
-            alg.physical_time += alg.dt * dephasing_step
+            alg.n_dephasing_ticks += dephasing_step
+            alg.simulation_time += dephasing_step
 
             if has_dephased
-                ## === PARALLEL PHASE ===
+                # println("Successfully dephased in state $current_macrostate")
+                ## === PARALLEL PHASE === 
                 killed = false
+                i_min = nothing
+                new_macrostate = nothing
                 parallel_step = 0
-
+                
                 while !killed
-                    for i=1:alg.N_rep
-                        update_state!(alg.replicas[i],alg.simulator;rng=alg.rng)
-                        alg.cpu_clock_ticks += 1
+                    @threads for i=1:alg.N
+                        if killed == true
+                            break
+                        end
+
+                        update_microstate!(alg.replicas[i],alg.simulator)
+                        rep_macrostate = get_macrostate!(alg.macrostate_checker,alg.replicas[i],current_macrostate)
                         
-                        if check_death(alg.replica_killer,alg.replicas[i],current_state,alg.rng)
+                        if check_death(alg.replica_killer,rep_macrostate,current_macrostate,alg.rng)
                             killed = true
-                            alg.reference_walker = branch_replica!(alg.replica_brancher,alg.replicas[i],alg.reference_walker) # set reference walker to escaped replica
-                            escape_time = (alg.N_rep * parallel_step +i)
-                            empty!(alg.replicas)
+                            i_min = i
+                            new_macrostate = rep_macrostate
+                            # println("\t\tReplica $i crossed to state $(rep_macrostate)")
+                            print("M")
                             break
                         end
                     end
 
                     parallel_step += 1
-                    alg.wall_clock_ticks += 1
                 end
 
-                sim_ticks += escape_time
+                alg.n_parallel_ticks += parallel_step
+                alg.n_transitions += 1
+                alg.simulation_time += (alg.N*parallel_step + i_min)
+                alg.reference_walker = copy(alg.replicas[i_min])
+                current_macrostate = new_macrostate
             end
         end
     end
 
+
+    # dummy method definitions
+
+    function check_dephasing!(checker,replicas,current_macrostate,step_n) end
+    function get_macrostate!(checker,walker,current_macrostate) end
+    function update_microstate!(simulator,walker) end
+    function check_death(checker,macrostate_a,macrostate_b,rng) end
+    function log_state!(logger; kwargs...) end
 end
