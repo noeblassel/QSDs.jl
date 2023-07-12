@@ -4,7 +4,7 @@ module ParRep
 
     using Random, Base.Threads
 
-    Base.@kwdef mutable struct GenParRepAlgorithm{S,P,M,K,R,X}
+    Base.@kwdef mutable struct GenParRepAlgorithm{S,P,M,K,R,X,L}
         N::Int #number of replicas
 
         # algorithm parameters
@@ -14,7 +14,7 @@ module ParRep
         macrostate_checker::M # an object to check the macrostate
         replica_killer::K # an object to kill the replicas
 
-        # logger::L # to log characteristics of the trajectory
+        logger::L # log characteristics of the trajectory / debug 
 
         # Internal variables
 
@@ -27,6 +27,7 @@ module ParRep
         n_parallel_ticks::Int=0 # number of (parallel) simulation steps in parallel step
         n_transitions::Int=0 # number of observed transitions
         simulation_time::Int=0 # simulation time -- in number of equivalent steps of the DNS Markov chain
+        wallclock_time::Int=0
     end
 
     function simulate!(alg::GenParRepAlgorithm, n_transitions)
@@ -44,11 +45,13 @@ module ParRep
                 alg.n_simulation_ticks += 1
                 current_macrostate = get_macrostate!(alg.macrostate_checker,alg.reference_walker,current_macrostate)
                 initialization_step +=1
+                log_state!(alg.logger,:initialisation; algorithm = alg)
             end
-            # println("Succesfully initialised in state ",current_macrostate)
+            println("Succesfully initialised in state ",current_macrostate)
 
             alg.n_initialisation_ticks += initialization_step
             alg.simulation_time += initialization_step
+            alg.wallclock_time += initialization_step
 
             ## === DECORRELATION/DEPHASING === 
             empty!(alg.replicas)
@@ -65,9 +68,10 @@ module ParRep
                 update_microstate!(alg.reference_walker,alg.simulator)
                 ref_macrostate = get_macrostate!(alg.macrostate_checker,alg.reference_walker,current_macrostate)
                 if check_death(alg.replica_killer,ref_macrostate,current_macrostate,alg.rng)
+                log_state!(alg.logger,:transition; algorithm = alg,current_macrostate=current_macrostate,new_macrostate=ref_macrostate,exit_time=0,dephasing_time=dephasing_step)
                      current_macrostate = ref_macrostate
                     # println("\tReference walker has crossed to state $(current_macrostate)")
-                    print("Q")
+                    # print("Q")
                     alg.n_transitions += 1
                     break
                 end
@@ -86,7 +90,7 @@ module ParRep
                     end
 
                 end
-
+                log_state!(alg.logger,:dephasing; algorithm = alg,killed_ixs=killed_ixs)
                 survivors = setdiff(1:alg.N,killed_ixs)
 
                 # println("\t$(length(killed_ixs)) replicas have been killed")
@@ -109,9 +113,10 @@ module ParRep
 
             alg.n_dephasing_ticks += dephasing_step
             alg.simulation_time += dephasing_step
+            alg.wallclock_time += dephasing_step
 
             if has_dephased
-                # println("Successfully dephased in state $current_macrostate")
+                println("Successfully dephased in state $current_macrostate")
                 ## === PARALLEL PHASE === 
                 killed = false
                 i_min = nothing
@@ -132,18 +137,25 @@ module ParRep
                             i_min = i
                             new_macrostate = rep_macrostate
                             # println("\t\tReplica $i crossed to state $(rep_macrostate)")
-                            print("M")
+                            # print("M")
                             break
                         end
                     end
 
                     parallel_step += 1
+                    log_state!(alg.logger,:parallel; algorithm = alg)
                 end
 
-                alg.n_parallel_ticks += parallel_step
-                alg.n_transitions += 1
-                alg.simulation_time += (alg.N*parallel_step + i_min)
+                
                 alg.reference_walker = copy(alg.replicas[i_min])
+                exit_time = (alg.N*parallel_step + i_min)
+
+                log_state!(alg.logger,:transition; algorithm = alg,current_macrostate=current_macrostate,new_macrostate=new_macrostate,exit_time=exit_time,dephasing_time=dephasing_step)
+                
+                alg.n_parallel_ticks += parallel_step
+                alg.wallclock_time += parallel_step
+                alg.n_transitions += 1
+                alg.simulation_time += exit_time
                 current_macrostate = new_macrostate
             end
         end
@@ -156,5 +168,5 @@ module ParRep
     function get_macrostate!(checker,walker,current_macrostate) end
     function update_microstate!(simulator,walker) end
     function check_death(checker,macrostate_a,macrostate_b,rng) end
-    function log_state!(logger; kwargs...) end
+    function log_state!(logger,step; kwargs...) end
 end

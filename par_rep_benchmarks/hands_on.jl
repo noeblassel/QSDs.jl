@@ -1,4 +1,4 @@
-include("ParRep.jl"); using .ParRep, Base.Threads,Random
+include("ParRep.jl"); using .ParRep, Base.Threads,Random, Plots
 
 Base.@kwdef mutable struct GelmanRubinDiagnostic{F}
     observables::F
@@ -8,7 +8,7 @@ Base.@kwdef mutable struct GelmanRubinDiagnostic{F}
     tol = 5e-2
 end
 
-function ParRep.check_dephasing!(checker::GelmanRubinDiagnostic,replicas::Vector{X},current_macrostate,step_n) where {X}
+function ParRep.check_dephasing!(checker::GelmanRubinDiagnostic,replicas::Vector,current_macrostate,step_n)
     
     if step_n == 1 # initialize running mean and running square_mean buffer
         checker.means = zeros(length(checker.observables),length(replicas))
@@ -46,7 +46,7 @@ Base.@kwdef mutable struct SteepestDescentState{X}
     ∇V::Function
 end
 
-function ParRep.get_macrostate!(checker::SteepestDescentState,microstate::X,current_macrostate) where {X}
+function ParRep.get_macrostate!(checker::SteepestDescentState,microstate,current_macrostate)
     x = copy(microstate)
     grad_norm = Inf
     min_iter,iter = 20,1
@@ -105,15 +105,95 @@ end
 struct ExitEventKiller end
 ParRep.check_death(::ExitEventKiller,state_a,state_b,_) = (state_a != state_b)
 
-ol_sim = OverdampedLangevinSimulator(dt = 1e-4,β = 0.09,∇V = grad_mueller_brown,n_steps=1)
-state_check = SteepestDescentState{Vector{Float64}}(η=1e-4,∇V = grad_mueller_brown)
-gelman_rubin = GelmanRubinDiagnostic(observables=[(x,i)->(x[1]-state_check.minima[i][1]),(x,i)->(x[2]-state_check.minima[i][2])],tol=0.05)
+xlims = -1.2,0.78
+ylims = -0.3,1.9
 
-alg = GenParRepAlgorithm(N=32,
+xrange = range(xlims...,200)
+yrange = range(ylims...,200)
+contourf(xrange,yrange,mueller_brown,levels=50,clims=(-150,200),cmap=:hsv)
+
+
+Base.@kwdef mutable struct AnimationLogger2D
+    anim = Plots.Animation()
+end
+
+function ParRep.log_state!(logger::AnimationLogger2D,step; kwargs...)
+    if step == :initialization
+        f=contourf(xrange,yrange,mueller_brown,levels=50,clims=(-150,200),cmap=:hsv,title="Initialize",xlims=xlims,ylims=ylims)
+        ref_walker = kwargs[:algorithm].reference_walker
+        scatter!(f,[ref_walker[1]],[ref_walker[2]],color=:blue,label="",markersize=4)
+        frame(logger.anim,f)
+    elseif step == :dephasing
+        f=contourf(xrange,yrange,mueller_brown,levels=50,clims=(-150,200),cmap=:hsv,title="Dephase/decorrelate",xlims=xlims,ylims=ylims)
+        reps = kwargs[:algorithm].replicas
+        ref_walker = kwargs[:algorithm].reference_walker
+        scatter!(f,[ref_walker[1]],[ref_walker[2]],color=:blue,label="",markersize=4)
+        xs,ys = [rep[1] for rep in reps],[rep[2] for rep in reps]
+        scatter!(f,xs,ys,color=[(i in kwargs[:killed_ixs]) ? :red : :blue for i in 1:kwargs[:algorithm].N],markersize=2,label="")
+        frame(logger.anim,f)
+    elseif step == :parallel
+        f=contourf(xrange,yrange,mueller_brown,levels=50,clims=(-150,200),cmap=:hsv,title="Parallel exit",xlims=xlims,ylims=ylims)
+        reps = kwargs[:algorithm].replicas
+        ref_walker = kwargs[:algorithm].reference_walker
+        scatter!(f,[ref_walker[1]],[ref_walker[2]],color=:blue,label="",markersize=4)
+        xs,ys = [rep[1] for rep in reps],[rep[2] for rep in reps]
+        scatter!(f,xs,ys,color=:blue,markersize=2,label="")
+        frame(logger.anim,f)
+    end
+end
+
+Base.@kwdef mutable struct TransitionLogger{X}
+    state_from = Int[]
+    state_to = Int[]
+    transition_time = Int[]
+    is_metastable = Bool[]
+    exit_configuration = X[]
+end
+
+function ParRep.log_state!(logger::TransitionLogger,step; kwargs...)
+    if step == :transition
+        alg = kwargs[:algorithm]
+        state_b = kwargs[:new_macrostate]
+        state_a = kwargs[:current_macrostate]
+        exit_time = kwargs[:exit_time]
+        dephasing_time = kwargs[:dephasing_time]
+        push!(logger.state_from,state_a)
+        push!(logger.state_to,state_b)
+        push!(logger.transition_time,exit_time+dephasing_time)
+        push!(logger.is_metastable,exit_time != 0)
+        push!(logger.exit_configuration,alg.reference_walker)
+    end
+end
+
+# logger = AnimationLogger2D()
+logger = TransitionLogger{Vector{Float64}}()
+ol_sim = OverdampedLangevinSimulator(dt = 1e-4,β = 0.1,∇V = grad_mueller_brown,n_steps=10)
+state_check = SteepestDescentState{Vector{Float64}}(η=1e-4,∇V = grad_mueller_brown)
+# gelman_rubin = GelmanRubinDiagnostic(observables=[(x,i)->(x[1]-state_check.minima[i][1]),(x,i)->(x[2]-state_check.minima[i][2])],tol=0.05)
+gelman_rubin = GelmanRubinDiagnostic(observables=[(x,i)->mueller_brown(x)],tol=0.05)
+
+alg = GenParRepAlgorithm(N=64,
                         simulator = ol_sim,
                         dephasing_checker = gelman_rubin,
                         macrostate_checker = state_check,
                         replica_killer = ExitEventKiller(),
+                        logger = logger,
                         reference_walker = [-0.5,1.5])
 
-ParRep.simulate!(alg,1000)
+ParRep.simulate!(alg,5000)
+
+f=open("log.txt","w")
+println(f,"state_from=",logger.state_from)
+println(f,"state_to=",logger.state_to)
+println(f,"transition_time=",logger.transition_time*ol_sim.dt*ol_sim.n_steps)
+println(f,"is_metastable=",logger.is_metastable)
+println(f,"exit_configuration=",logger.exit_configuration)
+close(f)
+# mp4(logger.anim,"anims/movie_short.mp4",fps=4)
+
+
+
+## TODO: log transition events (state_from , state_to, elapsed_time from previous transition event, )
+## → get histograms of transition times
+## → interface with Molly for LJ clusters
+## → 
