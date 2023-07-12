@@ -105,12 +105,12 @@ end
 struct ExitEventKiller end
 ParRep.check_death(::ExitEventKiller,state_a,state_b,_) = (state_a != state_b)
 
-xlims = -1.2,0.78
-ylims = -0.3,1.9
+# xlims = -1.2,0.78
+# ylims = -0.3,1.9
 
-xrange = range(xlims...,200)
-yrange = range(ylims...,200)
-contourf(xrange,yrange,mueller_brown,levels=50,clims=(-150,200),cmap=:hsv)
+# # xrange = range(xlims...,200)
+# yrange = range(ylims...,200)
+# contourf(xrange,yrange,mueller_brown,levels=50,clims=(-150,200),cmap=:hsv)
 
 
 # Base.@kwdef mutable struct AnimationLogger2D
