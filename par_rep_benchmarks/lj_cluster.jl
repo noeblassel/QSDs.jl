@@ -69,7 +69,7 @@ end
 
 using Plots
 
-N_cluster = 17
+N_cluster = 7
 inter = LJClusterInteraction2D{N_cluster}()
 sim = OverdampedLangevinSimulator(dt = 1e-4,β = 1.0,∇V = (x->lj_grad(x,inter)),n_steps=100)
 X = zeros(2,N_cluster)

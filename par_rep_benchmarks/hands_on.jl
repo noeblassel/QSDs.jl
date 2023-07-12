@@ -1,5 +1,10 @@
 include("ParRep.jl"); using .ParRep, Base.Threads,Random
 
+
+n_transitions = parse(Int64,ARGS[1])
+freq_checkpoint = parse(Int64,ARGS[2])
+n_replicas = parse(Int64,ARGS[3])
+
 Base.@kwdef mutable struct GelmanRubinDiagnostic{F}
     observables::F
     means = Matrix{Float64}(undef,1,1)
@@ -172,7 +177,7 @@ state_check = SteepestDescentState{Vector{Float64}}(η=1e-4,∇V = grad_mueller_
 # gelman_rubin = GelmanRubinDiagnostic(observables=[(x,i)->(x[1]-state_check.minima[i][1]),(x,i)->(x[2]-state_check.minima[i][2])],tol=0.05)
 gelman_rubin = GelmanRubinDiagnostic(observables=[(x,i)->mueller_brown(x)],tol=0.05)
 
-alg = GenParRepAlgorithm(N=64,
+alg = GenParRepAlgorithm(N=n_replicas,
                         simulator = ol_sim,
                         dephasing_checker = gelman_rubin,
                         macrostate_checker = state_check,
@@ -180,17 +185,24 @@ alg = GenParRepAlgorithm(N=64,
                         logger = logger,
                         reference_walker = [-0.5,1.5])
 
-n_transitions = parse(Int64,ARGS[1])
 
-ParRep.simulate!(alg,n_transitions)
+if !isdir("logs")
+    mkdir("logs")
+end
 
-f=open("log.txt","w")
-println(f,"state_from=",logger.state_from)
-println(f,"state_to=",logger.state_to)
-println(f,"transition_time=",logger.transition_time*ol_sim.dt*ol_sim.n_steps)
-println(f,"is_metastable=",logger.is_metastable)
-println(f,"exit_configuration=",logger.exit_configuration)
-close(f)
+for k=1:(n_transitions ÷ freq_checkpoint)
+    println(k)
+    ParRep.simulate!(alg,freq_checkpoint)
+
+    write(open(joinpath("logs","state_from.int64"),"w"),logger.state_from)
+    write(open(joinpath("logs","state_to.int64"),"w"),logger.state_to)
+    write(open(joinpath("logs","transition_time.f64"),"w"),logger.transition_time*ol_sim.dt*ol_sim.n_steps)
+    write(open(joinpath("logs","is_metastable.bool"),"w"),logger.is_metastable)
+    write(open(joinpath("logs","exit_configuration.vec2f64"),"w"),stack(logger.exit_configuration))
+
+    alg.n_transitions = 0
+end
+
 # mp4(logger.anim,"anims/movie_short.mp4",fps=4)
 
 
