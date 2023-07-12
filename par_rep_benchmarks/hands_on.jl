@@ -1,4 +1,4 @@
-include("ParRep.jl"); using .ParRep, Base.Threads,Random, Plots
+include("ParRep.jl"); using .ParRep, Base.Threads,Random
 
 Base.@kwdef mutable struct GelmanRubinDiagnostic{F}
     observables::F
@@ -113,34 +113,34 @@ yrange = range(ylims...,200)
 contourf(xrange,yrange,mueller_brown,levels=50,clims=(-150,200),cmap=:hsv)
 
 
-Base.@kwdef mutable struct AnimationLogger2D
-    anim = Plots.Animation()
-end
+# Base.@kwdef mutable struct AnimationLogger2D
+#     anim = Plots.Animation()
+# end
 
-function ParRep.log_state!(logger::AnimationLogger2D,step; kwargs...)
-    if step == :initialization
-        f=contourf(xrange,yrange,mueller_brown,levels=50,clims=(-150,200),cmap=:hsv,title="Initialize",xlims=xlims,ylims=ylims)
-        ref_walker = kwargs[:algorithm].reference_walker
-        scatter!(f,[ref_walker[1]],[ref_walker[2]],color=:blue,label="",markersize=4)
-        frame(logger.anim,f)
-    elseif step == :dephasing
-        f=contourf(xrange,yrange,mueller_brown,levels=50,clims=(-150,200),cmap=:hsv,title="Dephase/decorrelate",xlims=xlims,ylims=ylims)
-        reps = kwargs[:algorithm].replicas
-        ref_walker = kwargs[:algorithm].reference_walker
-        scatter!(f,[ref_walker[1]],[ref_walker[2]],color=:blue,label="",markersize=4)
-        xs,ys = [rep[1] for rep in reps],[rep[2] for rep in reps]
-        scatter!(f,xs,ys,color=[(i in kwargs[:killed_ixs]) ? :red : :blue for i in 1:kwargs[:algorithm].N],markersize=2,label="")
-        frame(logger.anim,f)
-    elseif step == :parallel
-        f=contourf(xrange,yrange,mueller_brown,levels=50,clims=(-150,200),cmap=:hsv,title="Parallel exit",xlims=xlims,ylims=ylims)
-        reps = kwargs[:algorithm].replicas
-        ref_walker = kwargs[:algorithm].reference_walker
-        scatter!(f,[ref_walker[1]],[ref_walker[2]],color=:blue,label="",markersize=4)
-        xs,ys = [rep[1] for rep in reps],[rep[2] for rep in reps]
-        scatter!(f,xs,ys,color=:blue,markersize=2,label="")
-        frame(logger.anim,f)
-    end
-end
+# function ParRep.log_state!(logger::AnimationLogger2D,step; kwargs...)
+#     if step == :initialization
+#         f=contourf(xrange,yrange,mueller_brown,levels=50,clims=(-150,200),cmap=:hsv,title="Initialize",xlims=xlims,ylims=ylims)
+#         ref_walker = kwargs[:algorithm].reference_walker
+#         scatter!(f,[ref_walker[1]],[ref_walker[2]],color=:blue,label="",markersize=4)
+#         frame(logger.anim,f)
+#     elseif step == :dephasing
+#         f=contourf(xrange,yrange,mueller_brown,levels=50,clims=(-150,200),cmap=:hsv,title="Dephase/decorrelate",xlims=xlims,ylims=ylims)
+#         reps = kwargs[:algorithm].replicas
+#         ref_walker = kwargs[:algorithm].reference_walker
+#         scatter!(f,[ref_walker[1]],[ref_walker[2]],color=:blue,label="",markersize=4)
+#         xs,ys = [rep[1] for rep in reps],[rep[2] for rep in reps]
+#         scatter!(f,xs,ys,color=[(i in kwargs[:killed_ixs]) ? :red : :blue for i in 1:kwargs[:algorithm].N],markersize=2,label="")
+#         frame(logger.anim,f)
+#     elseif step == :parallel
+#         f=contourf(xrange,yrange,mueller_brown,levels=50,clims=(-150,200),cmap=:hsv,title="Parallel exit",xlims=xlims,ylims=ylims)
+#         reps = kwargs[:algorithm].replicas
+#         ref_walker = kwargs[:algorithm].reference_walker
+#         scatter!(f,[ref_walker[1]],[ref_walker[2]],color=:blue,label="",markersize=4)
+#         xs,ys = [rep[1] for rep in reps],[rep[2] for rep in reps]
+#         scatter!(f,xs,ys,color=:blue,markersize=2,label="")
+#         frame(logger.anim,f)
+#     end
+# end
 
 Base.@kwdef mutable struct TransitionLogger{X}
     state_from = Int[]
@@ -180,7 +180,9 @@ alg = GenParRepAlgorithm(N=64,
                         logger = logger,
                         reference_walker = [-0.5,1.5])
 
-ParRep.simulate!(alg,5000)
+n_transitions = parse(Int64,ARGS[1])
+
+ParRep.simulate!(alg,n_transitions)
 
 f=open("log.txt","w")
 println(f,"state_from=",logger.state_from)
