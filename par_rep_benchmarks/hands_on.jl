@@ -1,4 +1,4 @@
-include("ParRep.jl"); using .ParRep, Base.Threads,Random
+include("ParRep.jl"); using .ParRep, Base.Threads,Random, StaticArrays
 
 
 # n_transitions = parse(Int64,ARGS[1])
@@ -144,7 +144,7 @@ function grad_entropic_switch(x, y)
 
     dy = 10*(tmp1 + 1)*y*tmp2 + 3*tmp3*(2*tmp5*(y - 5/3) - 2*tmp4*(y - 1/3)) + 0.8*(y - 1/3)^3
 
-    return [dx, dy]
+    return @MVector [dx, dy]
 end
 
 grad_entropic_switch(q) = grad_entropic_switch(q[1],q[2])
@@ -266,7 +266,7 @@ function main()
                             macrostate_checker = state_check,
                             replica_killer = ExitEventKiller(),
                             logger = logger,
-                            reference_walker = minima[:,1])
+                            reference_walker = @MVector [minima[1,1],minima[1,2]])
 
     log_dir = "logs_cold"
 
