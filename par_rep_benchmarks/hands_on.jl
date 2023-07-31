@@ -147,9 +147,7 @@ function grad_entropic_switch(x, y)
     return [dx, dy]
 end
 
-function grad_entropic_switch(q)
-    return grad_entropic_switch(q...)
-end
+grad_entropic_switch(q) = grad_entropic_switch(q[1],q[2])
 
 
 ###
@@ -182,7 +180,9 @@ end
 
 function ParRep.update_microstate!(X,simulator::OverdampedLangevinSimulator)
     for k=1:simulator.n_steps
-        X .= X-simulator.∇V(X)*simulator.dt + simulator.σ*randn(simulator.rng,size(X)...)
+        X .-= simulator.∇V(X)*simulator.dt
+        X[1] += simulator.σ*randn(simulator.rng)
+        X[2] += simulator.σ*randn(simulator.rng)
     end
 end
 
@@ -250,53 +250,56 @@ function ParRep.log_state!(logger::TransitionLogger,step; kwargs...)
 end
 
 # logger = AnimationLogger2D()
-logger = TransitionLogger{Vector{Float64}}()
-ol_sim = OverdampedLangevinSimulator(dt = 1e-3,β = 4.0,∇V = grad_entropic_switch,n_steps=1)
-state_check = PolyhedralStateChecker()
-# gelman_rubin = GelmanRubinDiagnostic(observables=[(x,i)->(x[1]-state_check.minima[i][1]),(x,i)->(x[2]-state_check.minima[i][2])],tol=0.05)
-gelman_rubin = GelmanRubinDiagnostic(observables=[(x,i)->sum(abs,x-minima[:,i])],tol=0.05)
 
-n_replicas = 32
+function main()
+    logger = TransitionLogger{Vector{Float64}}()
+    ol_sim = OverdampedLangevinSimulator(dt = 1e-3,β = 3.0,∇V = grad_entropic_switch,n_steps=1)
+    state_check = PolyhedralStateChecker()
+    # gelman_rubin = GelmanRubinDiagnostic(observables=[(x,i)->(x[1]-state_check.minima[i][1]),(x,i)->(x[2]-state_check.minima[i][2])],tol=0.05)
+    gelman_rubin = GelmanRubinDiagnostic(observables=[(x,i)->sum(abs,x-minima[:,i])],tol=0.05)
 
-alg = GenParRepAlgorithm(N=n_replicas,
-                        simulator = ol_sim,
-                        dephasing_checker = gelman_rubin,
-                        macrostate_checker = state_check,
-                        replica_killer = ExitEventKiller(),
-                        logger = logger,
-                        reference_walker = minima[:,1])
+    n_replicas = 32
 
-log_dir = "logs_cold"
+    alg = GenParRepAlgorithm(N=n_replicas,
+                            simulator = ol_sim,
+                            dephasing_checker = gelman_rubin,
+                            macrostate_checker = state_check,
+                            replica_killer = ExitEventKiller(),
+                            logger = logger,
+                            reference_walker = minima[:,1])
+
+    log_dir = "logs_cold"
 
 
-if !isdir(log_dir)
-    mkdir(log_dir)
+    if !isdir(log_dir)
+        mkdir(log_dir)
+    end
+
+    n_transitions = 1_000_000
+    freq_checkpoint = 100
+
+   @time for k=1:(n_transitions ÷ freq_checkpoint)
+        println(k)
+        ParRep.simulate!(alg,freq_checkpoint;verbosity=0)
+
+        write(open(joinpath(log_dir,"state_from.int64"),"w"),logger.state_from)
+        write(open(joinpath(log_dir,"state_to.int64"),"w"),logger.state_to)
+        write(open(joinpath(log_dir,"transition_time.f64"),"w"),logger.transition_time*ol_sim.dt*ol_sim.n_steps)
+        write(open(joinpath(log_dir,"is_metastable.bool"),"w"),logger.is_metastable)
+        write(open(joinpath(log_dir,"exit_configuration.vec2f64"),"w"),stack(logger.exit_configuration))
+
+        alg.n_transitions = 0
+    end
+ 
+
+    # mp4(logger.anim,"anims/movie_short.mp4",fps=4)
+
+
+
+    ## TODO: log transition events (state_from , state_to, elapsed_time from previous transition event, )
+    ## → get histograms of transition times
+    ## → interface with Molly for LJ clusters
+    ## → 
 end
 
-n_transitions = 1_000_000
-freq_checkpoint = 100
-
-# println(ParRep.get_macrostate!(state_check,minima[:,1],nothing))
-
-
-@time for k=1:(n_transitions ÷ freq_checkpoint)
-    println(k)
-    ParRep.simulate!(alg,freq_checkpoint;verbosity=0)
-
-    write(open(joinpath(log_dir,"state_from.int64"),"w"),logger.state_from)
-    write(open(joinpath(log_dir,"state_to.int64"),"w"),logger.state_to)
-    write(open(joinpath(log_dir,"transition_time.f64"),"w"),logger.transition_time*ol_sim.dt*ol_sim.n_steps)
-    write(open(joinpath(log_dir,"is_metastable.bool"),"w"),logger.is_metastable)
-    write(open(joinpath(log_dir,"exit_configuration.vec2f64"),"w"),stack(logger.exit_configuration))
-
-    alg.n_transitions = 0
-end
-
-# mp4(logger.anim,"anims/movie_short.mp4",fps=4)
-
-
-
-## TODO: log transition events (state_from , state_to, elapsed_time from previous transition event, )
-## → get histograms of transition times
-## → interface with Molly for LJ clusters
-## → 
+main()
