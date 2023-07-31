@@ -273,8 +273,8 @@ if !isdir(log_dir)
     mkdir(log_dir)
 end
 
-n_transitions = 10_000_000
-freq_checkpoint = 1000
+n_transitions = 1_000_000
+freq_checkpoint = 100
 
 # println(ParRep.get_macrostate!(state_check,minima[:,1],nothing))
 
