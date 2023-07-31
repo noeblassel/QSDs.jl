@@ -70,8 +70,8 @@ end
 using Plots
 
 N_cluster = 7
-inter = LJClusterInteraction2D{N_cluster}()
-sim = OverdampedLangevinSimulator(dt = 1e-4,β = 1.0,∇V = (x->lj_grad(x,inter)),n_steps=100)
+inter = LJClusterInteraction2D{N_cluster}(α=0.5)
+sim = OverdampedLangevinSimulator(dt = 5e-4,β = 1.0,∇V = (x->lj_grad(x,inter)),n_steps=100)
 X = zeros(2,N_cluster)
 
 k = ceil(Int,sqrt(N_cluster))
@@ -85,7 +85,7 @@ X .-= [sum(X[1,:]);sum(X[2,:])]/N_cluster
 
 ## visualize
 
-nframes = 1000
+nframes = 10000
 anim= @animate for i=1:nframes
     (i%10 == 0) && println(i,"/",nframes)
     update_state!(X,sim)
@@ -94,12 +94,12 @@ end
 
 mp4(anim,"lj_cluster.mp4")
 
-## test speed
-niter = 1000 # note this is actually 100000 simulation steps since sim.n_steps=100
-println("speed test:")
-@time for i=1:niter
-    (i%10 == 0) && println(i,"/",niter)
-    update_state!(X,sim)
-end
+# ## test speed
+# niter = 1000 # note this is actually 100000 simulation steps since sim.n_steps=100
+# println("speed test:")
+# @time for i=1:niter
+#     (i%10 == 0) && println(i,"/",niter)
+#     update_state!(X,sim)
+# end
 
 ## lots of room for optimization
