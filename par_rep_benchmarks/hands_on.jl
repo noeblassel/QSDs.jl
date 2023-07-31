@@ -256,7 +256,7 @@ state_check = PolyhedralStateChecker()
 # gelman_rubin = GelmanRubinDiagnostic(observables=[(x,i)->(x[1]-state_check.minima[i][1]),(x,i)->(x[2]-state_check.minima[i][2])],tol=0.05)
 gelman_rubin = GelmanRubinDiagnostic(observables=[(x,i)->sum(abs,x-minima[:,i])],tol=0.05)
 
-n_replicas = 16
+n_replicas = 32
 
 alg = GenParRepAlgorithm(N=n_replicas,
                         simulator = ol_sim,
@@ -273,8 +273,8 @@ if !isdir(log_dir)
     mkdir(log_dir)
 end
 
-n_transitions = 100000
-freq_checkpoint = 100
+n_transitions = 10_000_000
+freq_checkpoint = 1000
 
 # println(ParRep.get_macrostate!(state_check,minima[:,1],nothing))
 
