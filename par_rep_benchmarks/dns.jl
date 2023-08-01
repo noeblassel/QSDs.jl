@@ -56,19 +56,19 @@ function ParRep.get_macrostate!(checker::PolyhedralStateChecker,walker,current_s
 end
 ###
 
-Base.@kwdef struct OverdampedLangevinSimulator{F,R}
+Base.@kwdef struct EMSimulator{B,Σ,R}
     dt::Float64
     β::Float64
-    ∇V::F
+    drift!::B
+    diffusion!::Σ
     n_steps=1
-    σ = √(2dt/β)
     rng::R = Random.GLOBAL_RNG
 end
 
-function ParRep.update_microstate!(X,simulator::OverdampedLangevinSimulator)
+function ParRep.update_microstate!(X,simulator::EMSimulator)
     for k=1:simulator.n_steps
-        X .-=-simulator.∇V(X)*simulator.dt
-        X .+= simulator.σ*randn(simulator.rng,size(X)...)
+        simulator.drift!(X)
+        simulator.diffusion!(X)
     end
 end
 
@@ -79,11 +79,11 @@ if !isdir("logs_dns")
     mkdir("logs_dns")
 end
 
-n_transitions = freq_checkpoint = 1000
+n_transitions = freq_checkpoint = 100000
 
 function main(n_transitions,freq_checkpoint)
     state_check = PolyhedralStateChecker()
-    ol_sim = OverdampedLangevinSimulator(dt = 1e-3,β = 0.1,∇V = grad_entropic_switch,n_steps=1)
+    ol_sim = OverdampedLangevinSimulator(dt = 1e-3,β = 3.0,∇V = grad_entropic_switch,n_steps=1)
     replica_killer = ExitEventKiller()
     
     reference_walker = minima[:,1]
@@ -100,7 +100,7 @@ function main(n_transitions,freq_checkpoint)
         for i=1:freq_checkpoint
             transitioned = false
             while !transitioned
-                ParRep.update_microstate!(ol_sim,reference_walker)
+                ParRep.update_microstate!(reference_walker,ol_sim)
                 transition_timer += ol_sim.dt*ol_sim.n_steps
                 new_state = ParRep.get_macrostate!(state_check,reference_walker,old_state)
                 # println(new_state)
@@ -123,11 +123,10 @@ function main(n_transitions,freq_checkpoint)
 
         write(open(joinpath("logs_dns","state_from.int64"),"w"),state_from)
         write(open(joinpath("logs_dns","state_to.int64"),"w"),state_to)
-        write(open(joinpath("logs_dns","transition_time.f64"),"w"),transition_timer)
+        write(open(joinpath("logs_dns","transition_time.f64"),"w"),transition_time)
         write(open(joinpath("logs_dns","is_metastable.bool"),"w"),falses(length(state_from)))
         write(open(joinpath("logs_dns","exit_configuration.vec2f64"),"w"),stack(exit_configuration))
 
-        alg.n_transitions = 0
     end
 
 end

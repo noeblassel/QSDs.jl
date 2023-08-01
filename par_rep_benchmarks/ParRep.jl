@@ -30,14 +30,18 @@ module ParRep
         wallclock_time::Int=0
     end
 
-    function simulate!(alg::GenParRepAlgorithm, n_transitions;verbosity=0)
+    @inbounds function simulate!(alg::GenParRepAlgorithm, n_transitions;verbosity=0)
         current_macrostate = get_macrostate!(alg.macrostate_checker,alg.reference_walker,nothing)
         survived = fill(true,alg.N)
+
+        while length(alg.replicas) < alg.N# initialize list of replicas
+            push!(alg.replicas,copy(alg.reference_walker))
+        end
 
         while alg.n_transitions < n_transitions
             ## === INITIALISATION PHASE ===
             initialization_step = 0
-
+            # println(alg.reference_walker)
             while current_macrostate === nothing
                 # println("initialising --- iteration $(initialization_step)")
                 update_microstate!(alg.reference_walker,alg.simulator)
@@ -52,11 +56,9 @@ module ParRep
             alg.n_initialisation_ticks += initialization_step
             alg.simulation_time += initialization_step
             alg.wallclock_time += initialization_step
-
             ## === DECORRELATION/DEPHASING === 
-            empty!(alg.replicas)
-            for i=1:alg.N
-                push!(alg.replicas,copy(alg.reference_walker))
+            @threads for i=1:alg.N
+                alg.replicas[i] .= alg.reference_walker
             end
             
             has_dephased = false
@@ -97,18 +99,15 @@ module ParRep
                 end
                 
                 survivors = (1:alg.N)[survived]
+
                 @threads for i=1:alg.N
-                    !survived[i] && (alg.replicas[i] = copy(alg.replicas[rand(survivors)]))
+                    !survived[i] && (alg.replicas[i] .= alg.replicas[rand(survivors)])
                 end
                 
                 fill!(survived,true)
 
                 has_dephased = check_dephasing!(alg.dephasing_checker,alg.replicas,current_macrostate,dephasing_step)
 
-                # Obar = sum(alg.dephasing_checker.means;dims = 2) / alg.N
-                # numerator = sum(@. (alg.dephasing_checker.sq_means -2alg.dephasing_checker.means*Obar + Obar^2);dims=2)
-                # denominator = sum(alg.dephasing_checker.sq_means - alg.dephasing_checker.means .^ 2;dims=2)
-                # println("\tGelman-Rubin diagnoses: ",numerator./denominator)
             end
 
             alg.n_dephasing_ticks += dephasing_step
@@ -118,9 +117,8 @@ module ParRep
             if has_dephased
                 (verbosity>0) && @info "successful dephasing in state $current_macrostate"
                 ## === PARALLEL PHASE === 
-                killed = false
                 i_min = nothing
-                new_macrostate = fill(0,alg.N)
+                new_macrostate = fill(current_macrostate,alg.N)
                 parallel_step = 0
                 
                 fill!(survived,true)
@@ -144,7 +142,7 @@ module ParRep
 
                 i_min = argmin(survived)
                 
-                alg.reference_walker = copy(alg.replicas[i_min])
+                alg.reference_walker .= alg.replicas[i_min]
                 exit_time = (alg.N*parallel_step + i_min)
 
                 log_state!(alg.logger,:transition; algorithm = alg,current_macrostate=current_macrostate,new_macrostate=new_macrostate[i_min],exit_time=exit_time,dephasing_time=dephasing_step)

@@ -11,23 +11,27 @@ include("ParRep.jl"); using .ParRep, Base.Threads,Random, StaticArrays
 
 Base.@kwdef mutable struct GelmanRubinDiagnostic{F}
     observables::F
-    means = Matrix{Float64}(undef,1,1)
-    sq_means = Matrix{Float64}(undef,1,1)
+    num_replicas::Int64
+    means = Matrix{Float64}(undef,length(observables),num_replicas)
+    sq_means = Matrix{Float64}(undef,length(observables),num_replicas)
     burn_in = 1
     tol = 5e-2
+    ratio = 0.0
 end
 
-function ParRep.check_dephasing!(checker::GelmanRubinDiagnostic,replicas,current_macrostate,step_n)
+@inbounds function ParRep.check_dephasing!(checker::GelmanRubinDiagnostic,replicas,current_macrostate,step_n)
     
     if step_n == 1 # initialize running mean and running square_mean buffer
-        checker.means = zeros(length(checker.observables),length(replicas))
-        checker.sq_means = copy(checker.means)
+        fill!(checker.means,zero(Float64))
+        fill!(checker.sq_means,zero(Float64))
     end
+
+    m,n = size(checker.means)
     
-    @threads for i=1:length(replicas)
-        r = replicas[i]
-        for (j,f)=enumerate(checker.observables)
-            val = f(r,current_macrostate)
+    @threads for i=1:n
+        for j=1:m
+            f = checker.observables[j]
+            val = f(replicas[i],current_macrostate)
             sq_val = val^2
 
             checker.means[j,i] += (val-checker.means[j,i]) / step_n # online way to compute the running mean
@@ -38,79 +42,18 @@ function ParRep.check_dephasing!(checker::GelmanRubinDiagnostic,replicas,current
 
     (step_n < checker.burn_in) && return false
 
-    Obar = sum(checker.means;dims = 2) / length(replicas)
+    Obar = sum(checker.means;dims = 2) / n
 
-    numerator = sum(@. (checker.sq_means -2checker.means*Obar + Obar^2);dims=2)
-    denominator = sum(checker.sq_means - checker.means .^ 2;dims=2)
+    for j=1:m
+        checker.ratio = sum(checker.sq_means[j,i] -2checker.means[j,i]*Obar[j] + Obar[j]^2 for i=1:n)/sum(checker.sq_means[j,i]-checker.means[j,i]^2 for i=1:n)-1.0
+        (checker.ratio > checker.tol) && return false
+    end
 
-    R = maximum(numerator ./ denominator) - 1
-    return (R < checker.tol)
+    return true
 end
 
 
-### steepest descent state checker
-
-# Base.@kwdef mutable struct SteepestDescentState{X}
-#     η = 0.1
-#     dist_tol = 1e-2
-#     grad_tol = 1e-3
-#     minima = X[]
-#     energies = Float64[]
-#     ∇V::Function
-#     V::Function
-# end
-
-# function ParRep.get_macrostate!(checker::SteepestDescentState,microstate,current_macrostate)
-#     x = copy(microstate)
-#     grad_norm = Inf
-#     min_iter,iter = 20,1
-#     while true
-#         grad = checker.∇V(x)
-#         x .-= checker.η * grad # gradient descent step
-
-#         for (i,m)=enumerate(checker.minima)
-#             dist = √sum(abs2,m-x)
-#             if dist < checker.dist_tol
-#                 return i
-#             end
-#         end
-
-#         grad_norm = √sum(abs2,grad)
-#         (grad_norm < checker.grad_tol) && (iter > min_iter) && break
-#         iter +=1
-#     end
-
-#     push!(checker.minima,x)
-#     push!(checker.energies,checker.V(x))
-
-#     return length(checker.minima)
-# end
-# const A = [-200,-100,-170,15]
-# const a = [-1,-1,-6.5,0.7]
-# const b = [0,0,11,0.6]
-# const c = [-10,-10,-6.5,0.7]
-# const x0 = [1,0,-0.5,-1]
-# const y0 = [0,0.5,1.5,1]
-
-# mueller_brown(x,y) = sum(@. A*exp(a*(x-x0)^2 + b*(x-x0)*(y-y0)+c*(y-y0)^2))
-# mueller_brown(X) = mueller_brown(X...)
-
-# function grad_mueller_brown(x,y)
-#     v = @. A*exp(a*(x-x0)^2 + b*(x-x0)*(y-y0)+c*(y-y0)^2)
-#     return [sum(@. (2a*(x-x0)+b*(y-y0))*v), sum(@. (2c*(y-y0)+b*(x-x0))*v) ]
-# end
-
-# function grad_mueller_brown!(x,y,grad)
-#     v = @. A*exp(a*(x-x0)^2 + b*(x-x0)*(y-y0)+c*(y-y0)^2)
-#     grad[1] = sum(@. (2a*(x-x0)+b*(y-y0))*v)
-#     grad[2] = sum(@. (2c*(y-y0)+b*(x-x0))*v)
-# end
-
-# grad_mueller_brown(X) = grad_mueller_brown(X...)
-
-
 ### Entropic switch
-
 
 """
     entropic_switch(x, y)
@@ -132,22 +75,9 @@ end
 
 Gradient of the potential energy function.
 """
-function grad_entropic_switch(x, y)
 
-    tmp1 = exp(4*x)
-    tmp2 = exp(-x^2 - 2*x - y^2 - 1)
-    tmp3 = exp(-x^2)
-    tmp4 = exp(-(y-1/3)^2)
-    tmp5 = exp(-(y-5/3)^2)
 
-    dx = 0.8*x^3 + 10*(tmp1*(x - 1) + x + 1)*tmp2 - 6*tmp3*x*(tmp4 - tmp5)
-
-    dy = 10*(tmp1 + 1)*y*tmp2 + 3*tmp3*(2*tmp5*(y - 5/3) - 2*tmp4*(y - 1/3)) + 0.8*(y - 1/3)^3
-
-    return @MVector [dx, dy]
-end
-
-grad_entropic_switch(q) = grad_entropic_switch(q[1],q[2])
+grad_entropic_switch(q) = begin X = zeros(2); drift_entropic_switch!(X,-1); return X end
 
 
 ###
@@ -167,98 +97,73 @@ function ParRep.get_macrostate!(checker::PolyhedralStateChecker,walker,current_s
     (l1 >= 0) && (l2 >= 0) && return 2
     (l3 <= 0) && (l2 <= 0) && return 3
 end
-###
 
-Base.@kwdef struct OverdampedLangevinSimulator{F,R}
+Base.@kwdef struct EMSimulator{B,Σ,R}
     dt::Float64
     β::Float64
-    ∇V::F
+    σ::Float64 = sqrt(2dt/β)
+    drift!::B
+    diffusion!::Σ
     n_steps=1
-    σ = √(2dt/β)
     rng::R = Random.GLOBAL_RNG
 end
 
-function ParRep.update_microstate!(X,simulator::OverdampedLangevinSimulator)
+function ParRep.update_microstate!(X,simulator::EMSimulator)
     for k=1:simulator.n_steps
-        X .-= simulator.∇V(X)*simulator.dt
-        X[1] += simulator.σ*randn(simulator.rng)
-        X[2] += simulator.σ*randn(simulator.rng)
+        simulator.drift!(X,simulator.dt)
+        simulator.diffusion!(X,simulator.dt,simulator.σ,simulator.rng)
     end
 end
+
+function drift_entropic_switch!(X,dt)
+
+    tmp1 = exp(4X[1])
+    tmp2 = exp(-X[1]^2 - 2X[1] - X[2]^2 - 1)
+    tmp3 = exp(-X[1]^2)
+    tmp4 = exp(-(X[2]-1/3)^2)
+    tmp5 = exp(-(X[2]-5/3)^2)
+
+    X[1] -= dt * ( 0.8X[1]^3 + 10*(tmp1*(X[1] - 1) + X[1] + 1)*tmp2 - 6tmp3*X[1]*(tmp4 - tmp5) )
+    X[2] -=  dt * (  10*(tmp1 + 1)*X[2]*tmp2 + 3tmp3*(2tmp5*(X[2] - 5/3) - 2tmp4*(X[2] - 1/3)) + 0.8*(X[2] - 1/3)^3 )
+end
+
+function overdamped_langevin_noise!(X,dt,σ,rng)
+    X[1] += σ*randn(rng)
+    X[2] += σ*randn(rng)
+end
+
 
 struct ExitEventKiller end
 ParRep.check_death(::ExitEventKiller,state_a,state_b,_) = (state_a != state_b)
 
-# xlims = -1.2,0.78
-# ylims = -0.3,1.9
 
-# # xrange = range(xlims...,200)
-# yrange = range(ylims...,200)
-# contourf(xrange,yrange,mueller_brown,levels=50,clims=(-150,200),cmap=:hsv)
-
-
-# Base.@kwdef mutable struct AnimationLogger2D
-#     anim = Plots.Animation()
-# end
-
-# function ParRep.log_state!(logger::AnimationLogger2D,step; kwargs...)
-#     if step == :initialization
-#         f=contourf(xrange,yrange,mueller_brown,levels=50,clims=(-150,200),cmap=:hsv,title="Initialize",xlims=xlims,ylims=ylims)
-#         ref_walker = kwargs[:algorithm].reference_walker
-#         scatter!(f,[ref_walker[1]],[ref_walker[2]],color=:blue,label="",markersize=4)
-#         frame(logger.anim,f)
-#     elseif step == :dephasing
-#         f=contourf(xrange,yrange,mueller_brown,levels=50,clims=(-150,200),cmap=:hsv,title="Dephase/decorrelate",xlims=xlims,ylims=ylims)
-#         reps = kwargs[:algorithm].replicas
-#         ref_walker = kwargs[:algorithm].reference_walker
-#         scatter!(f,[ref_walker[1]],[ref_walker[2]],color=:blue,label="",markersize=4)
-#         xs,ys = [rep[1] for rep in reps],[rep[2] for rep in reps]
-#         scatter!(f,xs,ys,color=[(i in kwargs[:killed_ixs]) ? :red : :blue for i in 1:kwargs[:algorithm].N],markersize=2,label="")
-#         frame(logger.anim,f)
-#     elseif step == :parallel
-#         f=contourf(xrange,yrange,mueller_brown,levels=50,clims=(-150,200),cmap=:hsv,title="Parallel exit",xlims=xlims,ylims=ylims)
-#         reps = kwargs[:algorithm].replicas
-#         ref_walker = kwargs[:algorithm].reference_walker
-#         scatter!(f,[ref_walker[1]],[ref_walker[2]],color=:blue,label="",markersize=4)
-#         xs,ys = [rep[1] for rep in reps],[rep[2] for rep in reps]
-#         scatter!(f,xs,ys,color=:blue,markersize=2,label="")
-#         frame(logger.anim,f)
-#     end
-# end
-
-Base.@kwdef mutable struct TransitionLogger{X}
-    state_from = Int[]
-    state_to = Int[]
-    transition_time = Int[]
-    is_metastable = Bool[]
-    exit_configuration = X[]
+Base.@kwdef mutable struct TransitionLogger#{X}
+    log_dir
+    filenames = (state_from = "state_from.int64",state_to = "state_to.int64", transition_time = "transition_time.int64", dephased = "dephased.bool",exit_configuration = "exit_configuration.vec2dfloat64")
+    file_streams = [open(joinpath(log_dir,f),write=true) for f in filenames]
 end
 
 function ParRep.log_state!(logger::TransitionLogger,step; kwargs...)
     if step == :transition
-        alg = kwargs[:algorithm]
-        state_b = kwargs[:new_macrostate]
-        state_a = kwargs[:current_macrostate]
-        exit_time = kwargs[:exit_time]
-        dephasing_time = kwargs[:dephasing_time]
-        push!(logger.state_from,state_a)
-        push!(logger.state_to,state_b)
-        push!(logger.transition_time,exit_time+dephasing_time)
-        push!(logger.is_metastable,exit_time != 0)
-        push!(logger.exit_configuration,copy(alg.reference_walker))
+        write(logger.file_streams[1],kwargs[:current_macrostate])
+        write(logger.file_streams[2],kwargs[:new_macrostate])
+        write(logger.file_streams[3],kwargs[:exit_time]+kwargs[:dephasing_time])
+        write(logger.file_streams[4],kwargs[:exit_time] != 0)
+        write(logger.file_streams[5],kwargs[:algorithm].reference_walker)
     end
 end
 
 # logger = AnimationLogger2D()
 
 function main()
-    logger = TransitionLogger{Vector{Float64}}()
-    ol_sim = OverdampedLangevinSimulator(dt = 1e-3,β = 3.0,∇V = grad_entropic_switch,n_steps=1)
-    state_check = PolyhedralStateChecker()
-    # gelman_rubin = GelmanRubinDiagnostic(observables=[(x,i)->(x[1]-state_check.minima[i][1]),(x,i)->(x[2]-state_check.minima[i][2])],tol=0.05)
-    gelman_rubin = GelmanRubinDiagnostic(observables=[(x,i)->sum(abs,x-minima[:,i])],tol=0.05)
-
     n_replicas = 32
+    #logger = TransitionLogger{MVector{2,Float64}}()
+    log_dir = "logs_test"
+    logger = TransitionLogger(log_dir=log_dir)
+    ol_sim = EMSimulator(dt = 1e-3,β = 3.0,drift! = drift_entropic_switch!,diffusion! = overdamped_langevin_noise!,n_steps=1)
+    state_check = PolyhedralStateChecker()
+    gelman_rubin = GelmanRubinDiagnostic(observables=[(x,i)->sum(abs,x-minima[:,i])],num_replicas=n_replicas,tol=0.05)
+
 
     alg = GenParRepAlgorithm(N=n_replicas,
                             simulator = ol_sim,
@@ -268,38 +173,24 @@ function main()
                             logger = logger,
                             reference_walker = @MVector [minima[1,1],minima[1,2]])
 
-    log_dir = "logs_cold"
-
 
     if !isdir(log_dir)
         mkdir(log_dir)
     end
 
-    n_transitions = 1_000_000
+    n_transitions = 1000
     freq_checkpoint = 100
 
    @time for k=1:(n_transitions ÷ freq_checkpoint)
         println(k)
         ParRep.simulate!(alg,freq_checkpoint;verbosity=0)
 
-        write(open(joinpath(log_dir,"state_from.int64"),"w"),logger.state_from)
-        write(open(joinpath(log_dir,"state_to.int64"),"w"),logger.state_to)
-        write(open(joinpath(log_dir,"transition_time.f64"),"w"),logger.transition_time*ol_sim.dt*ol_sim.n_steps)
-        write(open(joinpath(log_dir,"is_metastable.bool"),"w"),logger.is_metastable)
-        write(open(joinpath(log_dir,"exit_configuration.vec2f64"),"w"),stack(logger.exit_configuration))
+        for fstream in logger.file_streams
+            flush(fstream)
+        end
 
         alg.n_transitions = 0
     end
- 
-
-    # mp4(logger.anim,"anims/movie_short.mp4",fps=4)
-
-
-
-    ## TODO: log transition events (state_from , state_to, elapsed_time from previous transition event, )
-    ## → get histograms of transition times
-    ## → interface with Molly for LJ clusters
-    ## → 
 end
 
 main()
