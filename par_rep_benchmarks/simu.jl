@@ -6,10 +6,10 @@ include("ParRep.jl"); using .ParRep, Base.Threads,Random
 # n_replicas = parse(Int64,ARGS[3])
 # pot_type = parse(ARGS[4])
 
+### Gelman-Rubin convergence test
 
-### Gelma-Rubin convergence test 
 arg_types = [Float64,Float64,Float64,Int64,Int64]
-β, dt,gr_tol, n_transitions,freq_checkpoint = parse.(arg_types,ARGS)
+β, dt,gr_tol, n_transitions,freq_checkpoint, n_replicas = parse.(arg_types,ARGS)
 
 Base.@kwdef mutable struct GelmanRubinDiagnostic{F}
     observables::F
@@ -68,8 +68,8 @@ function entropic_switch(x, y)
     return 3 * exp(-tmp1) * (exp(-tmp2) - exp(-(y - 5 / 3)^2)) - 5 * exp(-y^2) * (exp(-(x - 1)^2) + exp(-(x + 1)^2)) + 0.2 * tmp1^2 + 0.2 * tmp2^2
 end
 
-function entropic_switch(q)
-    return entropic_switch(q...)
+function entropic_switch(X)
+    return entropic_switch(X[1,:],X[2,:])
 end
 
 """
@@ -79,7 +79,7 @@ Gradient of the potential energy function.
 """
 
 
-grad_entropic_switch(q) = begin X = zeros(2); drift_entropic_switch!(X,-1); return X end
+# grad_entropic_switch(q) = begin X = zeros(2); drift_entropic_switch!(X,-1); return X end
 
 
 ###
@@ -126,7 +126,7 @@ function drift_entropic_switch!(X,dt)
     tmp5 = exp(-(X[2]-5/3)^2)
 
     X[1] -= dt * ( 0.8X[1]^3 + 10*(tmp1*(X[1] - 1) + X[1] + 1)*tmp2 - 6tmp3*X[1]*(tmp4 - tmp5) )
-    X[2] -=  dt * (  10*(tmp1 + 1)*X[2]*tmp2 + 3tmp3*(2tmp5*(X[2] - 5/3) - 2tmp4*(X[2] - 1/3)) + 0.8*(X[2] - 1/3)^3 )
+    X[2] -=  dt * ( 10*(tmp1 + 1)*X[2]*tmp2 + 3tmp3*(2tmp5*(X[2] - 5/3) - 2tmp4*(X[2] - 1/3)) + 0.8*(X[2] - 1/3)^3 )
 end
 
 function overdamped_langevin_noise!(X,dt,σ,rng)
@@ -156,11 +156,8 @@ function ParRep.log_state!(logger::TransitionLogger,step; kwargs...)
     end
 end
 
-# logger = AnimationLogger2D()
 
-function main(β,dt,gr_tol,n_transitions,freq_checkpoint)
-    n_replicas = 32
-    #logger = TransitionLogger{MVector{2,Float64}}()
+function main(β,dt,gr_tol,n_transitions,freq_checkpoint,n_replicas)
     log_dir = "logs_$(gr_tol)"
 
     if !isdir(log_dir)
@@ -185,8 +182,6 @@ function main(β,dt,gr_tol,n_transitions,freq_checkpoint)
     if !isdir(log_dir)
         mkdir(log_dir)
     end
-
-
 
    for k=1:(n_transitions ÷ freq_checkpoint)
         println(k)
