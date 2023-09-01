@@ -151,8 +151,8 @@ function ParRep.log_state!(logger::TransitionLogger,step; kwargs...)
         write(logger.file_streams[2],kwargs[:new_macrostate])
         write(logger.file_streams[3],kwargs[:dephasing_time])
         write(logger.file_streams[4],kwargs[:exit_time])
-        write(logger.file_streams[4],kwargs[:exit_time] != 0)
-        write(logger.file_streams[5],kwargs[:algorithm].reference_walker)
+        write(logger.file_streams[5],kwargs[:exit_time] != 0)
+        write(logger.file_streams[6],kwargs[:algorithm].reference_walker)
     end
 end
 
