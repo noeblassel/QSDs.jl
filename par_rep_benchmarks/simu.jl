@@ -8,7 +8,7 @@ include("ParRep.jl"); using .ParRep, Base.Threads,Random
 
 ### Gelman-Rubin convergence test
 
-arg_types = [Float64,Float64,Float64,Int64,Int64]
+arg_types = [Float64,Float64,Float64,Int64,Int64,Int64]
 β, dt,gr_tol, n_transitions,freq_checkpoint, n_replicas = parse.(arg_types,ARGS)
 
 Base.@kwdef mutable struct GelmanRubinDiagnostic{F}
