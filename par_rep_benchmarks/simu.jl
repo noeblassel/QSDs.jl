@@ -195,4 +195,4 @@ function main(β,dt,gr_tol,n_transitions,freq_checkpoint,n_replicas)
     end
 end
 
-main(β,dt,gr_tol,n_transitions,freq_checkpoint)
+main(β,dt,gr_tol,n_transitions,freq_checkpoint,n_replicas)
