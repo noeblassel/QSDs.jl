@@ -79,11 +79,11 @@ if !isdir("logs_dns")
     mkdir("logs_dns")
 end
 
-n_transitions = freq_checkpoint = 100000
+n_transitions = freq_checkpoint = 500
 
 function main(n_transitions,freq_checkpoint)
     state_check = PolyhedralStateChecker()
-    ol_sim = OverdampedLangevinSimulator(dt = 1e-3,β = 3.0,∇V = grad_entropic_switch,n_steps=1)
+    ol_sim = OverdampedLangevinSimulator(dt = 1e-3,β = 4.0,∇V = grad_entropic_switch,n_steps=1)
     replica_killer = ExitEventKiller()
     
     reference_walker = minima[:,1]
@@ -95,6 +95,8 @@ function main(n_transitions,freq_checkpoint)
     transition_time = Float64[]
     exit_configuration = Vector{Float64}[]
     println(old_state)
+
+    f_handles = [open(joinpath("logs_dns"))]
 
     @time for k=1:(n_transitions ÷ freq_checkpoint)
         for i=1:freq_checkpoint

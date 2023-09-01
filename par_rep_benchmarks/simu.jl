@@ -1,4 +1,4 @@
-include("ParRep.jl"); using .ParRep, Base.Threads,Random, StaticArrays
+include("ParRep.jl"); using .ParRep, Base.Threads,Random
 
 
 # n_transitions = parse(Int64,ARGS[1])
@@ -8,6 +8,8 @@ include("ParRep.jl"); using .ParRep, Base.Threads,Random, StaticArrays
 
 
 ### Gelma-Rubin convergence test 
+arg_types = [Float64,Float64,Float64,Int64,Int64]
+β, dt,gr_tol, n_transitions,freq_checkpoint = parse.(arg_types,ARGS)
 
 Base.@kwdef mutable struct GelmanRubinDiagnostic{F}
     observables::F
@@ -139,7 +141,7 @@ ParRep.check_death(::ExitEventKiller,state_a,state_b,_) = (state_a != state_b)
 
 Base.@kwdef mutable struct TransitionLogger#{X}
     log_dir
-    filenames = (state_from = "state_from.int64",state_to = "state_to.int64", transition_time = "transition_time.int64", dephased = "dephased.bool",exit_configuration = "exit_configuration.vec2dfloat64")
+    filenames = (state_from = "state_from.int64",state_to = "state_to.int64", dephasing_time = "transition_time.int64",metastable_exit_time="metastable_exit_time.int64", dephased = "dephased.bool",exit_configuration = "exit_configuration.vec2dfloat64")
     file_streams = [open(joinpath(log_dir,f),write=true) for f in filenames]
 end
 
@@ -147,7 +149,8 @@ function ParRep.log_state!(logger::TransitionLogger,step; kwargs...)
     if step == :transition
         write(logger.file_streams[1],kwargs[:current_macrostate])
         write(logger.file_streams[2],kwargs[:new_macrostate])
-        write(logger.file_streams[3],kwargs[:exit_time]+kwargs[:dephasing_time])
+        write(logger.file_streams[3],kwargs[:dephasing_time])
+        write(logger.file_streams[4],kwargs[:exit_time])
         write(logger.file_streams[4],kwargs[:exit_time] != 0)
         write(logger.file_streams[5],kwargs[:algorithm].reference_walker)
     end
@@ -155,14 +158,19 @@ end
 
 # logger = AnimationLogger2D()
 
-function main()
+function main(β,dt,gr_tol,n_transitions,freq_checkpoint)
     n_replicas = 32
     #logger = TransitionLogger{MVector{2,Float64}}()
-    log_dir = "logs_0.1"
+    log_dir = "logs_$(gr_tol)"
+
+    if !isdir(log_dir)
+        mkdir(log_dir)
+    end
+
     logger = TransitionLogger(log_dir=log_dir)
-    ol_sim = EMSimulator(dt = 1e-3,β = 4.0,drift! = drift_entropic_switch!,diffusion! = overdamped_langevin_noise!,n_steps=1)
+    ol_sim = EMSimulator(dt = dt,β = β,drift! = drift_entropic_switch!,diffusion! = overdamped_langevin_noise!,n_steps=1)
     state_check = PolyhedralStateChecker()
-    gelman_rubin = GelmanRubinDiagnostic(observables=[(x,i)->sum(abs,x-minima[:,i])],num_replicas=n_replicas,tol=0.05)
+    gelman_rubin = GelmanRubinDiagnostic(observables=[(x,i)->sum(abs,x-minima[:,i])],num_replicas=n_replicas,tol=gr_tol)
 
 
     alg = GenParRepAlgorithm(N=n_replicas,
@@ -171,15 +179,14 @@ function main()
                             macrostate_checker = state_check,
                             replica_killer = ExitEventKiller(),
                             logger = logger,
-                            reference_walker = @MVector [minima[1,1],minima[1,2]])
+                            reference_walker = [minima[1,1],minima[1,2]])
 
 
     if !isdir(log_dir)
         mkdir(log_dir)
     end
 
-    n_transitions = 500
-    freq_checkpoint = 100
+
 
    for k=1:(n_transitions ÷ freq_checkpoint)
         println(k)
@@ -193,38 +200,4 @@ function main()
     end
 end
 
-# function check_allocs()
-#     n_replicas = 32
-#     #logger = TransitionLogger{MVector{2,Float64}}()
-#     log_dir = "logs_test"
-#     logger = TransitionLogger(log_dir=log_dir)
-#     ol_sim = EMSimulator(dt = 1e-3,β = 3.0,drift! = drift_entropic_switch!,diffusion! = overdamped_langevin_noise!,n_steps=1)
-#     state_check = PolyhedralStateChecker()
-#     gelman_rubin = GelmanRubinDiagnostic(observables=[(x,i)->sum(abs,x-minima[:,i])],num_replicas=n_replicas,tol=0.1)
-
-
-#     alg = GenParRepAlgorithm(N=n_replicas,
-#                             simulator = ol_sim,
-#                             dephasing_checker = gelman_rubin,
-#                             macrostate_checker = state_check,
-#                             replica_killer = ExitEventKiller(),
-#                             logger = logger,
-#                             reference_walker = @MVector [minima[1,1],minima[1,2]])
-
-
-#     if !isdir(log_dir)
-#         mkdir(log_dir)
-#     end
-
-#     n_transitions = 100000
-#     freq_checkpoint = 100
-
- 
-#     end
-    
-
-#     println()
-# end
-
-@time main()
-@time 
+main(β,dt,gr_tol,n_transitions,freq_checkpoint)
