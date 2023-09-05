@@ -83,7 +83,7 @@ n_transitions = freq_checkpoint = 500
 
 function main(n_transitions,freq_checkpoint)
     state_check = PolyhedralStateChecker()
-    ol_sim = OverdampedLangevinSimulator(dt = 1e-3,β = 4.0,∇V = grad_entropic_switch,n_steps=1)
+    ol_sim = OverdampedLangevinSimulator(dt = 5e-3,β = 4.0,∇V = grad_entropic_switch,n_steps=1)
     replica_killer = ExitEventKiller()
     
     reference_walker = minima[:,1]
