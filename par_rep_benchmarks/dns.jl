@@ -72,6 +72,23 @@ function ParRep.update_microstate!(X,simulator::EMSimulator)
     end
 end
 
+function drift_entropic_switch!(X,dt)
+
+    tmp1 = exp(4X[1])
+    tmp2 = exp(-X[1]^2 - 2X[1] - X[2]^2 - 1)
+    tmp3 = exp(-X[1]^2)
+    tmp4 = exp(-(X[2]-1/3)^2)
+    tmp5 = exp(-(X[2]-5/3)^2)
+
+    X[1] -= dt * ( 0.8X[1]^3 + 10*(tmp1*(X[1] - 1) + X[1] + 1)*tmp2 - 6tmp3*X[1]*(tmp4 - tmp5) )
+    X[2] -=  dt * ( 10*(tmp1 + 1)*X[2]*tmp2 + 3tmp3*(2tmp5*(X[2] - 5/3) - 2tmp4*(X[2] - 1/3)) + 0.8*(X[2] - 1/3)^3 )
+end
+
+function overdamped_langevin_noise!(X,dt,σ,rng)
+    X[1] += σ*randn(rng)
+    X[2] += σ*randn(rng)
+end
+
 struct ExitEventKiller end
 ParRep.check_death(::ExitEventKiller,state_a,state_b,_) = (state_a != state_b)
 
@@ -84,7 +101,7 @@ freq_checkpoint = 100
 
 function main(n_transitions,freq_checkpoint)
     state_check = PolyhedralStateChecker()
-    ol_sim = OverdampedLangevinSimulator(dt = 5e-3,β = 4.0,∇V = grad_entropic_switch,n_steps=1)
+    ol_sim = EMSimulator(dt = dt,β = β,drift! = drift_entropic_switch!,diffusion! = overdamped_langevin_noise!,n_steps=1)
     replica_killer = ExitEventKiller()
     
     reference_walker = minima[:,1]
