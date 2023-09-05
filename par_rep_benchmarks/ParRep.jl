@@ -30,7 +30,8 @@ module ParRep
         wallclock_time::Int=0
     end
 
-    @inbounds function simulate!(alg::GenParRepAlgorithm, n_transitions;verbosity=0)
+    @inbounds function simulate!(alg::GenParRepAlgorithm, n_transitions;verbose=false)
+        println("here")
         current_macrostate = get_macrostate!(alg.macrostate_checker,alg.reference_walker,nothing)
         survived = fill(true,alg.N)
 
@@ -43,19 +44,18 @@ module ParRep
             initialization_step = 0
             # println(alg.reference_walker)
             while current_macrostate === nothing
-                # println("initialising --- iteration $(initialization_step)")
                 update_microstate!(alg.reference_walker,alg.simulator)
-                # println("\treference walker: ",alg.reference_walker)
                 alg.n_simulation_ticks += 1
                 current_macrostate = get_macrostate!(alg.macrostate_checker,alg.reference_walker,current_macrostate)
                 initialization_step +=1
                 log_state!(alg.logger,:initialisation; algorithm = alg)
             end
-           (verbosity>0) && @info "initialized in state $(current_macrostate)"
+           (verbose) && @info "Initialized in state $(current_macrostate)."
 
             alg.n_initialisation_ticks += initialization_step
             alg.simulation_time += initialization_step
             alg.wallclock_time += initialization_step
+
             ## === DECORRELATION/DEPHASING === 
             @threads for i=1:alg.N
                 alg.replicas[i] .= alg.reference_walker
@@ -74,7 +74,7 @@ module ParRep
                 if check_death(alg.replica_killer,ref_macrostate,current_macrostate,alg.rng)
                     log_state!(alg.logger,:transition; algorithm = alg,current_macrostate=current_macrostate,new_macrostate=ref_macrostate,exit_time=0,dephasing_time=dephasing_step)
                      current_macrostate = ref_macrostate
-                     (verbosity>0) && @info "reference walker has crossed to state $(current_macrostate)"
+                     (verbose) && @info "Unsuccesful dephasing: reference walker has crossed to state $(current_macrostate) after $(dephasing_step) steps."
                     alg.n_transitions += 1
                     break
                 end
@@ -115,7 +115,7 @@ module ParRep
             alg.wallclock_time += dephasing_step
 
             if has_dephased
-                (verbosity>0) && @info "successful dephasing in state $current_macrostate"
+                (verbose) && @info "Successful dephasing in state $current_macrostate after $(dephasing_step) steps."
                 ## === PARALLEL PHASE === 
                 i_min = nothing
                 new_macrostate = fill(current_macrostate,alg.N)
@@ -131,7 +131,7 @@ module ParRep
                         if check_death(alg.replica_killer,rep_macrostate,current_macrostate,alg.rng)                            
                             new_macrostate[i] = rep_macrostate
                             survived[i] = false
-                            (verbosity>0) && @info "Replica $i crossed to state $(rep_macrostate)"
+                            (verbose) && @info "Replica $i crossed to state $(rep_macrostate) after $(parallel_steps) parallel steps"
                             break
                         end
                     end
