@@ -62,13 +62,14 @@ Base.@kwdef struct EMSimulator{B,Σ,R}
     drift!::B
     diffusion!::Σ
     n_steps=1
+    σ = sqrt(2dt/β)
     rng::R = Random.GLOBAL_RNG
 end
 
 function ParRep.update_microstate!(X,simulator::EMSimulator)
     for k=1:simulator.n_steps
-        simulator.drift!(X)
-        simulator.diffusion!(X)
+        simulator.drift!(X,simulator.dt)
+        simulator.diffusion!(X,simulator.dt,simulator.σ,simulator.rng)
     end
 end
 
