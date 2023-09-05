@@ -79,7 +79,8 @@ if !isdir("logs_dns")
     mkdir("logs_dns")
 end
 
-n_transitions = freq_checkpoint = 500
+n_transitions = 1000000
+freq_checkpoint = 100
 
 function main(n_transitions,freq_checkpoint)
     state_check = PolyhedralStateChecker()
