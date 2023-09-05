@@ -98,6 +98,8 @@ end
 
 n_transitions = 1000000
 freq_checkpoint = 100
+dt = 5e-3
+β = 4.0
 
 function main(n_transitions,freq_checkpoint)
     state_check = PolyhedralStateChecker()
@@ -106,7 +108,7 @@ function main(n_transitions,freq_checkpoint)
     
     reference_walker = minima[:,1]
     old_state = ParRep.get_macrostate!(state_check,reference_walker,nothing)
-    transition_timer = 0.0
+    transition_timer = 0
 
     state_from = Int64[]
     state_to = Int64[]
@@ -121,7 +123,7 @@ function main(n_transitions,freq_checkpoint)
             transitioned = false
             while !transitioned
                 ParRep.update_microstate!(reference_walker,ol_sim)
-                transition_timer += ol_sim.dt*ol_sim.n_steps
+                transition_timer += ol_sim.n_steps
                 new_state = ParRep.get_macrostate!(state_check,reference_walker,old_state)
                 # println(new_state)
 
@@ -132,7 +134,7 @@ function main(n_transitions,freq_checkpoint)
                     push!(exit_configuration,copy(reference_walker))
 
                     old_state = new_state
-                    transition_timer = 0.0
+                    transition_timer = 0
 
                     println(length(state_from)," /$n_transitions")
 
@@ -143,7 +145,7 @@ function main(n_transitions,freq_checkpoint)
 
         write(open(joinpath("logs_dns","state_from.int64"),"w"),state_from)
         write(open(joinpath("logs_dns","state_to.int64"),"w"),state_to)
-        write(open(joinpath("logs_dns","transition_time.f64"),"w"),transition_time)
+        write(open(joinpath("logs_dns","transition_time.int64"),"w"),transition_time)
         write(open(joinpath("logs_dns","is_metastable.bool"),"w"),falses(length(state_from)))
         write(open(joinpath("logs_dns","exit_configuration.vec2f64"),"w"),stack(exit_configuration))
 
