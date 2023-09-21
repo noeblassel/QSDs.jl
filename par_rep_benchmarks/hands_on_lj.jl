@@ -10,7 +10,7 @@ include("ParRep.jl"); using .ParRep, Base.Threads,Random
 # arg_types = [Float64,Float64,Float64,Int64,Int64,Int64,Int64,Int64]
 # β, dt,gr_tol,state_check_freq, n_transitions,freq_checkpoint, n_replicas,N_cluster = parse.(arg_types,ARGS)
 
-β,dt,gr_tol,gr_log_freq,state_check_freq,n_transitions,freq_checkpoint,n_replicas,N_cluster = 6.0,1e-3,0.1,10,40,100000,100,64,7
+β,dt,gr_tol,gr_log_freq,state_check_freq,n_transitions,freq_checkpoint,n_replicas,N_cluster = 5.0,1e-3,0.2,10,40,100000,100,64,7
 
 ## dephasing diagnostic
 
@@ -57,11 +57,13 @@ end
 
     for j=1:m
         checker.ratio = sum(checker.sq_means[j,i] -2checker.means[j,i]*Obar[j] + Obar[j]^2 for i=1:n)/sum(checker.sq_means[j,i]-checker.means[j,i]^2 for i=1:n)-1.0
-        # println("obs $j, ",checker.ratio)
+        println("obs $j, ",checker.ratio)
         (checker.ratio > checker.tol) && return false
     end
 
-    println("final ratio: $(checker.ratio)")
+    println("Ratio: $(checker.ratio)")
+    flush(stdout)
+    
     return true
 end
 
@@ -359,7 +361,7 @@ function main(β,dt,gr_tol,state_check_freq,n_transitions,freq_checkpoint,n_repl
     # logger = AnimationLogger2D()
     ol_sim = EMSimulator(dt = dt,β = β,drift! = drift_lj!,diffusion! = overdamped_langevin_noise!,n_steps=1)
     state_check = SteepestDescentStateSym{Matrix{Float64},typeof(pot),typeof(gradpot)}(V=pot,∇V=gradpot,η=2e-3,grad_tol=1e-4,e_tol=1e-1,check_freq=state_check_freq)
-    gelman_rubin = GelmanRubinDiagnostic(observables=[(x,i)->sum(abs2,x)/2N_cluster],num_replicas=n_replicas,tol=gr_tol,burn_in=state_check_freq,log_freq = gr_log_freq)
+    gelman_rubin = GelmanRubinDiagnostic(observables=[(x,i)->sum(abs2,x)/2N_cluster],num_replicas=n_replicas,tol=gr_tol,burn_in=2state_check_freq,log_freq = gr_log_freq)
 
     alg = GenParRepAlgorithm(N=n_replicas,
                             simulator = ol_sim,
