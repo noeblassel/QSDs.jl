@@ -10,7 +10,7 @@ include("ParRep.jl"); using .ParRep, Base.Threads,Random
 # arg_types = [Float64,Float64,Float64,Int64,Int64,Int64,Int64,Int64]
 # β, dt,gr_tol,state_check_freq, n_transitions,freq_checkpoint, n_replicas,N_cluster = parse.(arg_types,ARGS)
 
-β,dt,gr_tol,gr_log_freq,state_check_freq,n_transitions,freq_checkpoint,n_replicas,N_cluster = 6.0,1e-3,0.1,10,40,100000,100,32,7
+β,dt,gr_tol,gr_log_freq,state_check_freq,n_transitions,freq_checkpoint,n_replicas,N_cluster = 6.0,1e-3,0.1,10,40,100000,100,64,7
 
 ## dephasing diagnostic
 
