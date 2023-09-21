@@ -1,5 +1,4 @@
 include("ParRep.jl"); using .ParRep, Base.Threads,Random
-using Plots
 
 # n_transitions = parse(Int64,ARGS[1])
 # freq_checkpoint = parse(Int64,ARGS[2])
