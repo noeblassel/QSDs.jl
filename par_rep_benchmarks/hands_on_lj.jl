@@ -10,7 +10,7 @@ include("ParRep.jl"); using .ParRep, Base.Threads,Random
 # arg_types = [Float64,Float64,Float64,Int64,Int64,Int64,Int64,Int64]
 # β, dt,gr_tol,state_check_freq, n_transitions,freq_checkpoint, n_replicas,N_cluster = parse.(arg_types,ARGS)
 
-β,dt,gr_tol,gr_log_freq,state_check_freq,n_transitions,freq_checkpoint,n_replicas,N_cluster = 6.0,2e-3,0.1,10,40,100000,100,32,7
+β,dt,gr_tol,gr_log_freq,state_check_freq,n_transitions,freq_checkpoint,n_replicas,N_cluster = 6.0,1e-3,0.1,10,40,100000,100,32,7
 
 ## dephasing diagnostic
 
@@ -57,9 +57,11 @@ end
 
     for j=1:m
         checker.ratio = sum(checker.sq_means[j,i] -2checker.means[j,i]*Obar[j] + Obar[j]^2 for i=1:n)/sum(checker.sq_means[j,i]-checker.means[j,i]^2 for i=1:n)-1.0
-        println("obs $j, ",checker.ratio)
+        # println("obs $j, ",checker.ratio)
         (checker.ratio > checker.tol) && return false
     end
+
+    println("final ratio: $(checker.ratio)")
     return true
 end
 
@@ -124,6 +126,8 @@ function ParRep.update_microstate!(simulator::EMSimulator,X)
     for k=1:simulator.n_steps
         simulator.drift!(X,simulator.dt)
         simulator.diffusion!(X,simulator.dt,simulator.σ,simulator.rng)
+
+        (maximum(abs,X) > 20.0 ) && (error("Simulation blowup suspected: $X"))
     end
 end
 
