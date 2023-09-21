@@ -1,10 +1,10 @@
 using Plots, Statistics
 
-dirs = ["logs_0.1","logs_0.2","logs_0.4","logs_0.05"]
-labels = ["0.1","0.2","0.4","0.05"]
+dirs = ["logs_0.1","logs_0.2","logs_0.4","logs_0.05","logs_dns"]
+labels = ["0.1","0.2","0.4","0.05","dns"]
 types = [Bool,Int64,Int64,Int64,Int64]
 files = ["dephased.bool","transition_time.int64","metastable_exit_time.int64","state_from.int64","state_to.int64"]
-colors = [:red,:blue,:green,:black]
+colors = [:red,:blue,:green,:black,:orange]
 
 is_metastable,dephasing_time,metastable_exit_time,state_from,state_to = [[reinterpret(T,read(joinpath(dir,f))) for dir in dirs] for (T,f)=zip(types,files)]
 # exit_configuration = [reshape(conf,2,length(conf)÷2) for conf in exit_configuration]

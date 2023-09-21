@@ -1,5 +1,5 @@
 include("ParRep.jl"); using .ParRep, Base.Threads,Random
-
+using Plots
 
 # n_transitions = parse(Int64,ARGS[1])
 # freq_checkpoint = parse(Int64,ARGS[2])
@@ -8,39 +8,45 @@ include("ParRep.jl"); using .ParRep, Base.Threads,Random
 
 ### Gelman-Rubin convergence test
 
-arg_types = [Float64,Float64,Float64,Int64,Int64,Int64,Int64,Int64]
-β, dt,gr_tol,state_check_freq, n_transitions,freq_checkpoint, n_replicas,N_cluster = parse.(arg_types,ARGS)
+# arg_types = [Float64,Float64,Float64,Int64,Int64,Int64,Int64,Int64]
+# β, dt,gr_tol,state_check_freq, n_transitions,freq_checkpoint, n_replicas,N_cluster = parse.(arg_types,ARGS)
 
+β,dt,gr_tol,gr_log_freq,state_check_freq,n_transitions,freq_checkpoint,n_replicas,N_cluster = 6.0,2e-3,0.1,10,20,10,10,32,7
 
 ## dephasing diagnostic
 
 Base.@kwdef mutable struct GelmanRubinDiagnostic{F}
     observables::F
     num_replicas::Int64
-    means = Matrix{Float64}(undef,length(observables),num_replicas)
-    sq_means = Matrix{Float64}(undef,length(observables),num_replicas)
+    means = zeros(length(observables),num_replicas)
+    sq_means = zeros(length(observables),num_replicas)
     burn_in = 1
-    tol = 5e-2
+    log_freq = 1
+    tol = 1e-1
     ratio = 0.0
 end
 
 @inbounds function ParRep.check_dephasing!(checker::GelmanRubinDiagnostic,replicas,current_macrostate,step_n)
-    
-    if step_n == 1 # initialize running mean and running square_mean buffer
+    if step_n == 0 # initialize running mean and running square_mean buffer
         fill!(checker.means,zero(Float64))
         fill!(checker.sq_means,zero(Float64))
+    end
+    
+    if (step_n % checker.log_freq != 0)
+        return false
     end
 
     m,n = size(checker.means)
     
-    @threads for i=1:n
+    @threads for i=1:n #ADD @threads
         for j=1:m
+
             f = checker.observables[j]
             val = f(replicas[i],current_macrostate)
             sq_val = val^2
 
-            checker.means[j,i] += (val-checker.means[j,i]) / step_n # online way to compute the running mean
-            checker.sq_means[j,i] += (sq_val-checker.sq_means[j,i]) / step_n
+            checker.means[j,i] += (val-checker.means[j,i]) / (step_n÷checker.log_freq +1) # online way to compute the running mean
+            checker.sq_means[j,i] += (sq_val-checker.sq_means[j,i]) / (step_n÷checker.log_freq +1)
 
         end
     end
@@ -48,12 +54,13 @@ end
     (step_n < checker.burn_in) && return false
 
     Obar = sum(checker.means;dims = 2) / n
+    # println(Obar)
 
     for j=1:m
         checker.ratio = sum(checker.sq_means[j,i] -2checker.means[j,i]*Obar[j] + Obar[j]^2 for i=1:n)/sum(checker.sq_means[j,i]-checker.means[j,i]^2 for i=1:n)-1.0
+        println("obs $j, ",checker.ratio)
         (checker.ratio > checker.tol) && return false
     end
-
     return true
 end
 
@@ -65,14 +72,14 @@ Base.@kwdef struct LJClusterInteraction2D{N}
     σ6=σ^6
     σ12=σ6^2
     ε=1.0
-    α=1.0 # sharpness of harmonic confining potential
+    α=0.5 # sharpness of harmonic confining potential
      # for multithread force computation
 end
 
 function lj_energy(X,inter::LJClusterInteraction2D{N}) where {N}
     V = 0.0
     for i=1:N-1
-        for j=2:N
+        for j=i+1:N
             inv_r6=inv(sum(abs2,X[:,i]-X[:,j]))^3
             V += (inter.σ12*inv_r6^2-inter.σ6*inv_r6)
         end
@@ -80,9 +87,9 @@ function lj_energy(X,inter::LJClusterInteraction2D{N}) where {N}
     return 4inter.ε*V+inter.α*sum(abs2,X)/2 # add confining potential
 end
 
-function lj_grad(X,inter::LJClusterInteraction2D{N}) where {N}
-    F_threaded = fill(zeros(2,N),nthreads())
-    @threads for i=1:N-1
+@views @inbounds function lj_grad(X,inter::LJClusterInteraction2D{N}) where {N}
+    F = zeros(2,N)
+    for i=1:N-1
         r = zeros(2)
         f = zeros(2)
         for j=i+1:N
@@ -91,14 +98,15 @@ function lj_grad(X,inter::LJClusterInteraction2D{N}) where {N}
             inv_r4 = inv_r2^2
             inv_r8 = inv_r4^2
             
+
             f = (6inter.σ6 - 12inter.σ12*inv_r2*inv_r4)*inv_r8*r
 
-            F_threaded[threadid()][:,i] .+= f
-            F_threaded[threadid()][:,j] .-= f
+            F[:,i] .+= f
+            F[:,j] .-= f
+
         end
     end
-
-    return 4inter.ε*sum(F_threaded) + inter.α*X #add confining potential
+    return 4inter.ε*F + inter.α*X #add confining potential
 end
 
 ## simulator
@@ -113,7 +121,7 @@ Base.@kwdef struct EMSimulator{B,Σ,R}
     rng::R = Random.GLOBAL_RNG
 end
 
-function ParRep.update_microstate!(X,simulator::EMSimulator)
+function ParRep.update_microstate!(simulator::EMSimulator,X)
     for k=1:simulator.n_steps
         simulator.drift!(X,simulator.dt)
         simulator.diffusion!(X,simulator.dt,simulator.σ,simulator.rng)
@@ -130,9 +138,44 @@ ParRep.check_death(::ExitEventKiller,state_a,state_b,_) = (state_a != state_b)
 
 ### Logger
 
+
+# Base.@kwdef mutable struct AnimationLogger2D
+#     anim = Plots.Animation()
+# end
+
+# colors=[:red,:green,:blue,:gray,:pink,:orange,:yellow]
+# lims = (-3,3)
+
+# function ParRep.log_state!(logger::AnimationLogger2D,step; kwargs...)
+#     if step == :initialization
+#         ref_walker = kwargs[:algorithm].reference_walker
+#         f=scatter(ref_walker[1,:],ref_walker[2,:],color=colors,label=String(step),markersize=4,aspectratio=1,xlims=lims,ylims=lims,title="")
+#         frame(logger.anim,f)
+#     elseif step == :dephasing
+#         reps = kwargs[:algorithm].replicas
+#         ref_walker = kwargs[:algorithm].reference_walker
+#         f=scatter(ref_walker[1,:],ref_walker[2,:],color=colors,label=String(step),markersize=4,xlims=lims,ylims=lims)
+
+#         for rep in reps
+#             scatter!(f,rep[1,:],rep[2,:],markersize=2,color=colors,markeralpha=0.1,label="",aspectratio=1)
+#         end
+
+#         frame(logger.anim,f)
+#     elseif step == :parallel
+#         reps = kwargs[:algorithm].replicas
+#         ref_walker = kwargs[:algorithm].reference_walker
+#         f=scatter(ref_walker[1,:],ref_walker[2,:],color=colors,label=String(step),markersize=4,aspectratio=1,xlims=lims,ylims=lims)
+#         for rep in reps
+#             scatter!(f,rep[1,:],rep[2,:],markersize=2,color=colors,markeralpha=0.1,label="",aspectratio=1)
+#         end
+#         frame(logger.anim,f)
+#     end
+
+# end
+
 Base.@kwdef mutable struct TransitionLogger
     log_dir
-    filenames = (state_from = "state_from.int64",state_to = "state_to.int64", dephasing_time = "transition_time.int64",metastable_exit_time="metastable_exit_time.int64", dephased = "dephased.bool",exit_configuration = "exit_configuration.vec$(2N_cluster)Dfloat64",parallel_ticks="parallel_ticks.int64",dephasing_ticks="dephasing_ticks.int64")
+    filenames = (state_from = "state_from.int64",state_to = "state_to.int64", dephasing_time = "dephasing_time.int64",metastable_exit_time="metastable_exit_time.int64", dephased = "dephased.bool",parallel_ticks="parallel_ticks.int64",dephasing_ticks="dephasing_ticks.int64")
     file_streams = [open(joinpath(log_dir,f),write=true) for f in filenames]
     transition_count = 0
     flush_freq = 100
@@ -145,13 +188,12 @@ function ParRep.log_state!(logger::TransitionLogger,step; kwargs...)
         write(logger.file_streams[3],kwargs[:dephasing_time])
         write(logger.file_streams[4],kwargs[:exit_time])
         write(logger.file_streams[5],kwargs[:exit_time] != 0)
-        write(logger.file_streams[6],kwargs[:algorithm].reference_walker)
-        write(logger.file_streams[7],kwargs[:algorithm].n_parallel_ticks)
-        write(logger.file_streams[8],kwargs[:algorithm].n_dephasing_ticks)
+        write(logger.file_streams[6],kwargs[:algorithm].n_parallel_ticks)
+        write(logger.file_streams[7],kwargs[:algorithm].n_dephasing_ticks)
         logger.transition_count +=1
     end
     
-    (logger.transition_freq % flush_freq ==0) && flush.(logger.file_streams)
+    (logger.transition_count % logger.flush_freq ==0) && flush.(logger.file_streams)
 
 end
 
@@ -161,20 +203,43 @@ Base.@kwdef mutable struct SteepestDescentStateSym{X,E,F} # determine state by s
     η = 5e-4
     grad_tol = 1e-2
     e_tol = 1e-1
+    check_freq = 1
     minima = X[]
     minimums = Float64[]
+    # adjs = Dict{Int64,Vector{Vector{Bool}}}()
     V::E
     ∇V::F
+    # adj_dist = 1.5
 end
 
-function ParRep.get_macrostate!(checker::SteepestDescentStateSym,walker,current_macrostate)
+# function get_adj(x,rtol) # compute adjacency matrix of geometric graph associated with a cluster configuration
+#     _,n = size(x)
+#     r2 = rtol^2
+#     A = BitVector()
+
+#     for i=1:n
+#         for j=i+1:n
+#             push!(A,sum(abs2,x[:,i]-x[:,j])<r2)
+#         end
+#     end
+
+#     return A
+# end
+
+function ParRep.get_macrostate!(checker::SteepestDescentStateSym,walker,current_macrostate,step_n)
+
+    if step_n % checker.check_freq != 0
+        return current_macrostate
+    end
+
     x = copy(walker)
     grad_norm = Inf
 
     while (grad_norm > checker.grad_tol) #for k=1:checker.steps
         grad = checker.∇V(x)
         x .-= checker.η * grad # gradient descent step
-        grad_norm = maximum(abs.(grad))
+        grad_norm = maximum(abs,grad)
+        # println(checker.V(x))
     end
     
     if grad_norm < checker.grad_tol
@@ -182,25 +247,59 @@ function ParRep.get_macrostate!(checker::SteepestDescentStateSym,walker,current_
         pot = checker.V(x)
 
         if isempty(checker.minimums)
+            grad_norm = Inf
 
+            while (grad_norm > 1e-12) # minimize to full convergence
+                grad = checker.∇V(x)
+                x .-= checker.η * grad
+                grad_norm = maximum(abs,grad)
+            end
+            
             push!(checker.minima,x)
             push!(checker.minimums,pot)
+            # adj = get_adj(x,checker.adj_dist)
 
-            return 1
+            # checker.adjs[1] = [adj]
+
+            return 1#+im
         else
             ΔEs = @. abs(pot - checker.minimums)
             imin = argmin(ΔEs)
 
             if ΔEs[imin] < checker.e_tol
-                return imin
+                # adjs = checker.adjs[imin]
+                # adj = get_adj(x,checker.adj_dist)
+                
+
+                # for (i,A)= enumerate(adjs)
+                #     if A == adj
+                #         return imin + i*im
+                #     end
+                # end
+
+
+            # push!(adjs,adj)
+            return imin #+ length(adjs)*im
+
             else
+
+                grad_norm = Inf
+
+                while (grad_norm > 1e-12) # minimize to full convergence
+                    grad = checker.∇V(x)
+                    x .-= checker.η * grad
+                    grad_norm = maximum(abs,grad)
+                end
+
                 push!(checker.minima,x)
                 push!(checker.minimums,pot)
-
-                return length(checker.minima)
+                
+                # adj = get_adj(x,checker.adj_dist)
+                # checker.adjs[length(checker.minima)] = [adj]
+                return length(checker.minima)#+1im
             end 
         end
-    else # steepest descent has not converged in alloted number of iterations
+    else
         return nothing
     end
 end
@@ -208,7 +307,7 @@ end
 ## main function
 
 function main(β,dt,gr_tol,state_check_freq,n_transitions,freq_checkpoint,n_replicas)
-    log_dir = "logs_$(gr_tol)"
+    log_dir = "logs_$(gr_tol)_lj"
 
     if !isdir(log_dir)
         mkdir(log_dir)
@@ -217,7 +316,7 @@ function main(β,dt,gr_tol,state_check_freq,n_transitions,freq_checkpoint,n_repl
     N_cluster = 7
     inter = LJClusterInteraction2D{N_cluster}()
 
-    pot(X) = lj_grad(X,inter)
+    pot(X) = lj_energy(X,inter)
     gradpot(X) = lj_grad(X,inter)
 
     function drift_lj!(X,dt)
@@ -225,7 +324,7 @@ function main(β,dt,gr_tol,state_check_freq,n_transitions,freq_checkpoint,n_repl
     end
 
     function overdamped_langevin_noise!(X,dt,σ,rng)
-        X .+= σ*randn(rng,size(X)...)
+        X .+= σ*randn(rng,size(X))
     end
 
     X = zeros(2,N_cluster)
@@ -239,11 +338,25 @@ function main(β,dt,gr_tol,state_check_freq,n_transitions,freq_checkpoint,n_repl
 
     X .-= [sum(X[1,:]);sum(X[2,:])]/N_cluster
 
-    logger = TransitionLogger(log_dir=log_dir,flush_freq=freq_checkpoint)
-    ol_sim = EMSimulator(dt = dt,β = β,drift! = drift_lj!,diffusion! = overdamped_langevin_noise!,n_steps=state_check_freq)
-    state_check = SteepestDescentStateSym{Matrix{Float64},typeof(pot),typeof(gradpot)}(V=pot,∇V=gradpot,η=5e-3,grad_tol=2e-2,e_tol=5e-2)
-    gelman_rubin = GelmanRubinDiagnostic(observables=[(x,i)->sum(abs2,x-state_check.minima[i])],num_replicas=n_replicas,tol=gr_tol)
+    η = 5e-3
 
+    @info "Initializing at global minimum"
+
+    for k=1:200
+        grad = lj_grad(X,inter)
+        X .-= η*grad
+        if (k%1  == 0)
+            println("step $k: energy $(lj_energy(X,inter)), |grad|∞ = $(maximum(abs,grad))")
+        end
+    end
+
+    # println(X)
+
+    logger = TransitionLogger(log_dir=log_dir,flush_freq=freq_checkpoint)
+    # logger = AnimationLogger2D()
+    ol_sim = EMSimulator(dt = dt,β = β,drift! = drift_lj!,diffusion! = overdamped_langevin_noise!,n_steps=1)
+    state_check = SteepestDescentStateSym{Matrix{Float64},typeof(pot),typeof(gradpot)}(V=pot,∇V=gradpot,η=2e-3,grad_tol=1e-4,e_tol=1e-1,check_freq=state_check_freq)
+    gelman_rubin = GelmanRubinDiagnostic(observables=[(x,i)->sum(abs2,x)/2N_cluster],num_replicas=n_replicas,tol=gr_tol,burn_in=state_check_freq,log_freq = gr_log_freq)
 
     alg = GenParRepAlgorithm(N=n_replicas,
                             simulator = ol_sim,
@@ -259,7 +372,18 @@ function main(β,dt,gr_tol,state_check_freq,n_transitions,freq_checkpoint,n_repl
     end
 
     ParRep.simulate!(alg,n_transitions;verbose=true)
+    println(state_check.minima)
+    println(state_check.minimums)
+    # for i=1:1000
+    #     s=ParRep.get_macrostate!(state_check,X,nothing)
+    #     println(s)
+    #     println("\t",length(state_check.minima))
+    #     ParRep.update_microstate!(ol_sim,X)
+    # end
+    # println(state_check.minima)
+    # println(state_check.minimums)
 
+    # mp4(logger.anim,"lj_debug.mp4")
 end
 
 main(β,dt,gr_tol,state_check_freq,n_transitions,freq_checkpoint,n_replicas)
