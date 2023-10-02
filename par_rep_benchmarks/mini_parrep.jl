@@ -1,8 +1,9 @@
 using Base.Threads
 using Statistics, Random
 
-T = [Int,Float64,Int,Float64,Float64,String]
-n_exits,β,N,gr_α,state_α,of = parse.(T,ARGS)
+T = [Int,Float64,Int,Float64,Float64]
+n_exits,β,N,gr_α,state_α = parse.(T,ARGS[1:end-1])
+of = last(ARGS)
 
 function entropic_switch(x, y)
     tmp1 = x^2
