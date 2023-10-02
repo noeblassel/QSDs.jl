@@ -189,7 +189,7 @@ const β = 3.0
 for i=1:n_exits
     (i%20 == 0) && println("Sampling $i-th exit")
     # print("gpr: ")
-    t,x,ds,ps = sample_exit_genparrep(grad_entropic_switch!,dt,β,q⁰,N,α,ϕs,state_α)
+    t,x,ds,ps = sample_exit_genparrep(grad_entropic_switch!,dt,β,q⁰,N,gr_α,ϕs,state_α)
     push!(times_gpr,t)
     push!(exits_gpr,x)
     push!(decorr_steps,ds)
