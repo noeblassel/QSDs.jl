@@ -159,8 +159,6 @@ const ϕs = [q->q[1],q->q[2]]
 
 const dt = 5e-3
 
-@profview t,x,ds,ps = sample_exit_genparrep(grad_entropic_switch!,dt,β,q⁰,N,gr_α,ϕs,state_α)
-
 for i=1:n_exits
     (i%20 == 0) && println("Sampling $i-th exit")
     # print("gpr: ")
