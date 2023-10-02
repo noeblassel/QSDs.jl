@@ -1,6 +1,9 @@
 using Base.Threads
 using Statistics, Random
 
+T = [Int,Float64,Int,Float64,Float64,String]
+n_exits,β,N,gr_α,state_α,of = parse.(T,ARGS)
+
 function entropic_switch(x, y)
     tmp1 = x^2
     tmp2 = (y - 1 / 3)^2
@@ -29,7 +32,10 @@ const saddles = [-0.6172723078764598 0.6172723078764598 0.0; 1.1027345175080963 
 const neg_eigvecs = [0.6080988038706289 -0.6080988038706289 -1.0; 0.793861351075306 0.793861351075306 0.0]
 
 function get_state(s,q,α)
-    l1,l2,l3 =[(q-saddles[:,i])'neg_eigvecs[:,i] for i=1:3]# Fill me in
+    l1 = (q-saddles[:,1])'neg_eigvecs[:,1]
+    l2 = (q-saddles[:,2])'neg_eigvecs[:,2]
+    l3 = (q-saddles[:,3])'neg_eigvecs[:,3]
+    # l1,l2,l3 =[(q-saddles[:,i])'neg_eigvecs[:,i] for i=1:3]# Fill me in
 
     if s==1
         (l1 <= α) && (l3 >= -α) && return 1
@@ -44,17 +50,6 @@ function get_state(s,q,α)
     (l3 <= 0) && (l2 <= 0) && return 3
 end
 
-
-"""
-Arguments:
-∇V: gradient of potential energy function implementing a valid method for ∇V(q⁰)
-dt: timestep
-β: inverse temperature
-q⁰: initial point of the trajectory, a d-dimensional vector
-
-Returns:
-A (t,q)::Tuple{Float64,Vector{Float64},Int} containing the exit time, the exit configuration and the number of steps of the Markov chain
-"""
 function sample_exit_dns(∇V!,dt,β,q⁰,state_α)
     σ = sqrt(2dt/β)
     G = zero(q⁰)
@@ -74,20 +69,6 @@ function sample_exit_dns(∇V!,dt,β,q⁰,state_α)
 
 end
 
-"""
-Arguments:
-∇V: gradient of potential energy function implementing a valid method for ∇V(q⁰)
-dt: timestep
-β: inverse temperature
-T: simulation time
-q⁰: initial point of the trajectory, a d-dimensional vector
-N: number of replicas for the Flemming-Viot
-gr_α: tolerance parameter for the Gelman-Rubin diagnostic
-ϕs: a vector of K functions, such that ϕs[k] implements a method for ϕs[k](q⁰).
-
-Returns:
-A tuple (t,q,decorr_steps,parallel_steps)::Tuple{Float64,Vector{Float64},Int,Int} containing the exit time, exit configuration, the number of decorrelation/dephasing steps and the number of parallel exit steps.
-"""
 function sample_exit_genparrep(∇V!,dt,β,q⁰,N,gr_α,ϕs,state_α)
     σ = sqrt(2dt/β)
     q = copy(q⁰)
@@ -135,7 +116,7 @@ function sample_exit_genparrep(∇V!,dt,β,q⁰,N,gr_α,ϕs,state_α)
             end  
         end
 
-        if maximum((sum(Q[k,n] for n=1:N)-sum(S[k,n] for n=1:N)^2/(N*decorr_step))/(sum(Q[k,n]-S[k,n]^2/decorr_step for n=1:N)) for k=1:K) < 1 + gr_α # Gelman-Rubin diagnostic
+        if maximum((sum(Q[k,:])-sum(S[k,:])^2/(N*decorr_step))/(sum(Q[k,:])-sum(S[k,:] .^2)/decorr_step) for k=1:K) < 1 + gr_α # Gelman-Rubin diagnostic
             decorr = true
         end
     end
@@ -161,8 +142,6 @@ function sample_exit_genparrep(∇V!,dt,β,q⁰,N,gr_α,ϕs,state_α)
     end
 end
 
-const n_exits = 5000
-
 const times_gpr = Float64[]
 const times_dns = Float64[]
 
@@ -179,12 +158,7 @@ const ϕs = [q->q[1],q->q[2]]
 
 const dt = 5e-3
 
-const N = 32
-const gr_α = 0.1 # Gelman-Rubin tolerance threshold
-
-const state_α = 0.0 # state overlap
-
-const β = 3.0
+@profview t,x,ds,ps = sample_exit_genparrep(grad_entropic_switch!,dt,β,q⁰,N,gr_α,ϕs,state_α)
 
 for i=1:n_exits
     (i%20 == 0) && println("Sampling $i-th exit")
@@ -201,10 +175,12 @@ for i=1:n_exits
     push!(dns_steps,n)
 end
 
-println("times_gpr=",times_gpr)
-println("exits_gpr=",exits_gpr)
-println("decorr_steps=",decorr_steps)
-println("parallel_steps=",parallel_steps)
-println("times_dns=",times_dns)
-println("exits_dns=",exits_dns)
-println("dns_steps=",dns_steps)
+f = open(of,"w")
+
+println(f,"times_gpr=",times_gpr)
+println(f,"exits_gpr=",exits_gpr)
+println(f,"decorr_steps=",decorr_steps)
+println(f,"parallel_steps=",parallel_steps)
+println(f,"times_dns=",times_dns)
+println(f,"exits_dns=",exits_dns)
+println(f,"dns_steps=",dns_steps)
