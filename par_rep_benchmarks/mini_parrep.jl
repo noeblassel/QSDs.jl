@@ -161,28 +161,30 @@ function sample_exit_genparrep(∇V!,dt,β,q⁰,N,gr_α,ϕs,state_α)
     end
 end
 
-n_exits = 1000
+const n_exits = 5000
 
-times_gpr = Float64[]
-times_dns = Float64[]
+const times_gpr = Float64[]
+const times_dns = Float64[]
 
-exits_gpr = Vector{Float64}[]
-exits_dns = Vector{Float64}[]
+const exits_gpr = Vector{Float64}[]
+const exits_dns = Vector{Float64}[]
 
-decorr_steps = Int[]
-parallel_steps = Int[]
-dns_steps = Int[]
+const decorr_steps = Int[]
+const parallel_steps = Int[]
+const dns_steps = Int[]
 
-ϕs = [q->q[1],q->q[2]]
 
-dt = 5e-3
+const q⁰ = [-1.04805,-0.0420936]
+const ϕs = [q->q[1],q->q[2]]
 
-N = 32
-gr_α = 0.1 # Gelman-Rubin tolerance threshold
+const dt = 5e-3
 
-state_α = 0.0 # state overlap
+const N = 32
+const gr_α = 0.1 # Gelman-Rubin tolerance threshold
 
-β = 3.0
+const state_α = 0.0 # state overlap
+
+const β = 3.0
 
 for i=1:n_exits
     (i%20 == 0) && println("Sampling $i-th exit")
