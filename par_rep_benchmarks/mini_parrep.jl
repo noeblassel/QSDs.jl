@@ -1,3 +1,12 @@
+##################################################################
+#           Mini GenParRep
+# Author: Noé Blassel
+# Date: September 2023
+# Description: A minimalist (but still multi-threaded) implementation of GenParRep, applied to the exit problem for the three-well entropic switch potential.
+# The aim is to assess the impact of the metastable state definition on maximal parallel efficiency of the algorithm. (in terms of wall-clock time gain)
+##################################################################
+
+
 using Base.Threads
 using Statistics, Random
 
@@ -25,30 +34,36 @@ function grad_entropic_switch!(x,y,grad)
     return nothing
 end
 
-entropic_switch(q) = entropic_switch(q...)
-grad_entropic_switch!(q,grad) =grad_entropic_switch!(q...,grad) 
+entropic_switch(q) = entropic_switch(q[1],q[2])
+grad_entropic_switch!(q,grad) =grad_entropic_switch!(q[1],q[2],grad) 
 
 const minima = [-1.0480549928242202 0.0 1.0480549928242202; -0.042093666306677734 1.5370820044494633 -0.042093666306677734] # 2x3 matrix of local minima coordinates (x_1 | x_2 | x_3)
 const saddles = [-0.6172723078764598 0.6172723078764598 0.0; 1.1027345175080963 1.1027345175080963 -0.19999999999972246] # 2x3 matrix of saddle point coordinates (z_{12} | z_{23} | z_{13} )
 const neg_eigvecs = [0.6080988038706289 -0.6080988038706289 -1.0; 0.793861351075306 0.793861351075306 0.0]
 
-function get_state(s,q,α)
-    l1 = (q-saddles[:,1])'neg_eigvecs[:,1]
-    l2 = (q-saddles[:,2])'neg_eigvecs[:,2]
-    l3 = (q-saddles[:,3])'neg_eigvecs[:,3]
-    # l1,l2,l3 =[(q-saddles[:,i])'neg_eigvecs[:,i] for i=1:3]# Fill me in
-
-    if s==1
-        (l1 <= α) && (l3 >= -α) && return 1
-    elseif s==2
-        (l1 >= -α) && (l2 >= -α) && return 2
-    elseif s==3
-        (l3 <= α) && (l2 <= α) && return 3
+"""
+overlapping states:
+- s::Int, current state
+- q::Vector{Float64} configuration
+- α::Float64 fattening parameter
+- l:: Vector{Float64}: a 3x1 vector to store scalar products
+"""
+function get_state!(s,q,α,l)
+    for i=1:3 # compute scalar products
+        l[i] = (q[1]-saddles[1,i])*neg_eigvecs[1,i] + (q[2]-saddles[2,i])*neg_eigvecs[2,i]
     end
 
-    (l1 <= 0) && (l3 >= 0) && return 1
-    (l1 >= 0) && (l2 >= 0) && return 2
-    (l3 <= 0) && (l2 <= 0) && return 3
+    if s==1
+        (l[1] <= α) && (l[3] >= -α) && return 1
+    elseif s==2
+        (l[1] >= -α) && (l[2] >= -α) && return 2
+    elseif s==3
+        (l[3] <= α) && (l[2] <= α) && return 3
+    end
+
+    (l[1] <= 0) && (l[3] >= 0) && return 1
+    (l[1] >= 0) && (l[2] >= 0) && return 2
+    (l[3] <= 0) && (l[2] <= 0) && return 3
 end
 
 function sample_exit_dns(∇V!,dt,β,q⁰,state_α)
@@ -58,8 +73,9 @@ function sample_exit_dns(∇V!,dt,β,q⁰,state_α)
     q = copy(q⁰)
     dims=size(q)
     step = 0
+    l = zeros(3)
 
-    while get_state(1,q,state_α) == 1
+    while get_state!(1,q,state_α,l) == 1
         step +=1
         ∇V!(q,grad)
         randn!(G)
@@ -87,28 +103,31 @@ function sample_exit_genparrep(∇V!,dt,β,q⁰,N,gr_α,ϕs,state_α)
     S = zeros(K,N)
     Q = zeros(K,N)
 
+    ls = [zeros(3) for i=1:N]
+
+    killed = falses(N)
+
     decorr = false
     
     # decorrelation/dephasing step
     while !decorr
         decorr_step += 1
         
-        @threads for n=1:N # update replicasn
+        @threads for n=1:N # update replicas 
             ∇V!(X[n],grad[n])
             randn!(G[n])
             X[n] .+= -dt .* grad[n] .+ σ .* G[n]
+            killed[n] = get_state!(1,X[n],state_α,ls[n]) != 1 # compute states
         end
-
-        killed = @. get_state(1,X,state_α) != 1 # compute states
 
         if killed[1] # failed decorrelation: reference walker has exited
             return (decorr_step*dt,X[1],decorr_step,parallel_step)
         end
 
-        X[killed] .= copy.(rand(X[.! killed],sum(killed))) # Flemmin-Viot branching
+        X[killed] .= copy.(rand(X[.! killed],sum(killed))) # Flemming-Viot branching
         
         # update Gelman-Rubin quantities
-        @threads for n=1:N
+        @threads for n=1:N  
             for k=1:K
                 ϕ = ϕs[k]
                 v = ϕ(X[n])
@@ -117,7 +136,7 @@ function sample_exit_genparrep(∇V!,dt,β,q⁰,N,gr_α,ϕs,state_α)
             end  
         end
 
-        if maximum((sum(Q[k,:])-sum(S[k,:])^2/(N*decorr_step))/(sum(Q[k,:])-sum(S[k,:] .^2)/decorr_step) for k=1:K) < 1 + gr_α # Gelman-Rubin diagnostic
+        if @views maximum((sum(Q[k,:])-sum(S[k,:])^2/(N*decorr_step))/(sum(Q[k,:])-sum(abs2,S[k,:])/decorr_step) for k=1:K) < 1 + gr_α # Gelman-Rubin diagnostic
             decorr = true
         end
     end
@@ -127,13 +146,12 @@ function sample_exit_genparrep(∇V!,dt,β,q⁰,N,gr_α,ϕs,state_α)
     while true
         parallel_step += 1
 
-        @threads for n=1:N # update replicas
+        @threads for n=1:N # update replicas 
             ∇V!(X[n],grad[n])
             randn!(G[n])
             X[n] .+= -dt .* grad[n] .+ σ .* G[n]
+            killed[n] = get_state!(1,X[n],state_α,ls[n]) != 1 # compute state
         end
-
-        killed = @. get_state(1,X,state_α) != 1 # compute states
         
         if any(killed) # succesful exit
             ifirst = argmax(killed)
