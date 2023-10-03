@@ -136,9 +136,17 @@ function sample_exit_genparrep(∇V!,dt,β,q⁰,N,gr_α,ϕs,state_α)
             end  
         end
 
-        if @views maximum((sum(Q[k,:])-sum(S[k,:])^2/(N*decorr_step))/(sum(Q[k,:])-sum(abs2,S[k,:])/decorr_step) for k=1:K) < 1 + gr_α # Gelman-Rubin diagnostic
+        M = -Inf
+
+        for k=1:K
+            M = max(M,@views (sum(Q[k,:])-sum(S[k,:])^2/(N*decorr_step))/(sum(Q[k,:])-sum(abs2,S[k,:])/decorr_step))
+            (M >= 1 + gr_α) && break
+        end
+
+        if M < 1 + gr_α
             decorr = true
         end
+
     end
 
     # parallel step
