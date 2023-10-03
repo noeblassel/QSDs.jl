@@ -14,6 +14,8 @@ T = [Int,Float64,Int,Float64,Float64]
 n_exits,β,N,gr_α,state_α = parse.(T,ARGS[1:end-1])
 of = last(ARGS)
 
+##
+
 function entropic_switch(x, y)
     tmp1 = x^2
     tmp2 = (y - 1 / 3)^2
