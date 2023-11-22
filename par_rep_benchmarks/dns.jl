@@ -140,11 +140,12 @@ function main()
 
     println("Usage: β dt overlap n_transitions checkpoint_freq")
 
+
     β = parse(Float64,ARGS[1])
     dt = parse(Float64,ARGS[2])
     α_overlap = parse(Float64,ARGS[3])
-    n_transitions = parse(Int64,ARGS[4])
-    freq_checkpoint = parse(Int64,ARGS[5])
+    n_transitions = parse(Float64,ARGS[4])
+    freq_checkpoint = parse(Float64,ARGS[5])
 
     state_check = PolyhedralStateChecker(β,α_overlap)
     ol_sim = EMSimulator(dt = dt,β = β,drift! = drift_entropic_switch!,diffusion! = overdamped_langevin_noise!,n_steps=1)
