@@ -68,14 +68,14 @@ end
 ### Harmonic Diagnostic
 Base.@kwdef mutable struct HarmonicDiagnostic{T}
     λ₂::Vector{T} # a vector of λ₂s associated with each state
-    n::Int # number of 
+    m::Int # number of 1/λ2s elapsed before reaching QSD
     dt::T # timestep of simulation
 end
 
 
-# dt*step > n/λ₂
+# time > n/λ₂
 @inbounds function ParRep.check_dephasing!(checker::HarmonicDiagnostic,replicas,current_macrostate,step_n)
-    return step_n*checker.dt*checker.λ₂[current_macrostate]> checker.n 
+    return step_n*checker.dt*checker.λ₂[current_macrostate]> checker.m
 end
 
 
@@ -202,18 +202,25 @@ end
 # logger = AnimationLogger2D()
 
 function main()
-    n_replicas = 32
-    #logger = TransitionLogger{MVector{2,Float64}}()
-    log_dir = "logs_overlap_4.0"
+    println("Usage: N_replicas β dt overlap m_spectral_gaps n_transitions checkpoint_freq")
+
+    n_replicas = parse(Int64,ARGS[1])
+    β = parse(Int64,ARGS[2])
+    dt = parse(Float64,ARGS[3])
+    α_overlap = parse(Float64,ARGS[4])
+    m_sg = parse(Float64,ARGS[5])
+    n_transitions = parse(Int64,ARGS[6])
+    freq_checkpoint = parse(Int64,ARGS[7])
+
+    log_dir = "logs_overlap_$(β)_$(dt)_$(α_overlap)_$(m)"
     if !isdir(log_dir)
         mkdir(log_dir)
     end
-    β = 4.0
-    dt=5e-3
+
     logger = TransitionLogger(log_dir=log_dir)
     ol_sim = EMSimulator(dt = dt,β = β,drift! = drift_entropic_switch!,diffusion! = overdamped_langevin_noise!,n_steps=1)
-    state_check = PolyhedralStateChecker(β,3.0)
-    harm_check = HarmonicDiagnostic(λ₂=[8.472211868406559,3.7983868797287945,8.472211868406559],n=10,dt=dt)
+    state_check = PolyhedralStateChecker(β,α_overlap)
+    harm_check = HarmonicDiagnostic(λ₂=[8.472211868406559,3.7983868797287945,8.472211868406559],n=m_sg,dt=dt)
     # gelman_rubin = GelmanRubinDiagnostic(observables=[(x,i)->sum(abs,x-minima[:,i])],num_replicas=n_replicas,tol=0.05)
 
 
@@ -227,9 +234,6 @@ function main()
 
 
 
-    n_transitions = 1_000_000
-    freq_checkpoint = 100
-
    for k=1:(n_transitions ÷ freq_checkpoint)
         println(k)
         ParRep.simulate!(alg,freq_checkpoint;verbose=true)
@@ -242,37 +246,4 @@ function main()
     end
 end
 
-# function check_allocs()
-#     n_replicas = 32
-#     #logger = TransitionLogger{MVector{2,Float64}}()
-#     log_dir = "logs_test"
-#     logger = TransitionLogger(log_dir=log_dir)
-#     ol_sim = EMSimulator(dt = 1e-3,β = 3.0,drift! = drift_entropic_switch!,diffusion! = overdamped_langevin_noise!,n_steps=1)
-#     state_check = PolyhedralStateChecker()
-#     gelman_rubin = GelmanRubinDiagnostic(observables=[(x,i)->sum(abs,x-minima[:,i])],num_replicas=n_replicas,tol=0.1)
-
-
-#     alg = GenParRepAlgorithm(N=n_replicas,
-#                             simulator = ol_sim,
-#                             dephasing_checker = gelman_rubin,
-#                             macrostate_checker = state_check,
-#                             replica_killer = ExitEventKiller(),
-#                             logger = logger,
-#                             reference_walker = @MVector [minima[1,1],minima[1,2]])
-
-
-#     if !isdir(log_dir)
-#         mkdir(log_dir)
-#     end
-
-#     n_transitions = 100000
-#     freq_checkpoint = 100
-
- 
-#     end
-    
-
-#     println()
-# end
-
-@time main()
+main()
