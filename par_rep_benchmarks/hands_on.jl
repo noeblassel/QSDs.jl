@@ -212,7 +212,7 @@ function main()
     n_transitions = parse(Int64,ARGS[6])
     freq_checkpoint = parse(Int64,ARGS[7])
 
-    log_dir = "logs_overlap_$(β)_$(dt)_$(α_overlap)_$(m)"
+    log_dir = "logs_overlap_$(β)_$(dt)_$(α_overlap)_$(m_sg)"
     if !isdir(log_dir)
         mkdir(log_dir)
     end
