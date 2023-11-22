@@ -1,4 +1,4 @@
-include("ParRep.jl"); using .ParRep, Base.Threads,Random, StaticArrays, LinearAlgebra
+include("ParRep.jl"); using .ParRep, Base.Threads,Random, LinearAlgebra
 
 
 # n_transitions = parse(Int64,ARGS[1])
