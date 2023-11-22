@@ -68,7 +68,7 @@ end
 ### Harmonic Diagnostic
 Base.@kwdef mutable struct HarmonicDiagnostic{T}
     λ₂::Vector{T} # a vector of λ₂s associated with each state
-    m::Int # number of 1/λ2s elapsed before reaching QSD
+    m::T # number of 1/λ2s elapsed before reaching QSD
     dt::T # timestep of simulation
 end
 
