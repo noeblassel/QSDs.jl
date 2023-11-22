@@ -1,4 +1,4 @@
-include("ParRep.jl"); using .ParRep, Base.Threads,Random, StaticArrays
+include("ParRep.jl"); using .ParRep, Base.Threads,Random, StaticArrays, LinearAlgebra
 
 
 # n_transitions = parse(Int64,ARGS[1])
@@ -7,7 +7,19 @@ include("ParRep.jl"); using .ParRep, Base.Threads,Random, StaticArrays
 # pot_type = parse(ARGS[4])
 
 
-### Gelma-Rubin convergence test 
+### Gelman-Rubin convergence test
+
+### Polyhedral states
+const minima = [-1.0480549928242202 0.0 1.0480549928242202; -0.042093666306677734 1.5370820044494633 -0.042093666306677734]
+const saddles = [-0.6172723078764598 0.6172723078764598 0.0; 1.1027345175080963 1.1027345175080963 -0.19999999999972246]
+const neg_eigvecs = [0.6080988038706289 -0.6080988038706289 -1.0; 0.793861351075306 0.793861351075306 0.0]
+const λs_minima = [8.472211868406559,3.7983868797287945,8.472211868406559]
+const λs_saddles = [5.356906312070659,5.356906312070659,11.399661817554989]#neg eigvals
+
+# matrix associating transitions with saddles (J_{ij} = index of saddle point from i to j)
+const J = [0 1 3; 1 0 2; 3 2 0]
+# matrix giving the sign convention (σ_{ij}*neg_eigvecs[:,J_{ij}] = eigenvector pointing from state i to state j at z_{J_{ij}}
+const σ = [0 1 -1; -1 0 -1; 1 1 0]
 
 Base.@kwdef mutable struct GelmanRubinDiagnostic{F}
     observables::F
@@ -53,6 +65,20 @@ end
 end
 
 
+### Harmonic Diagnostic
+Base.@kwdef mutable struct HarmonicDiagnostic{T}
+    λ₂::Vector{T} # a vector of λ₂s associated with each state
+    n::Int # number of 
+    dt::T # timestep of simulation
+end
+
+
+# dt*step > n/λ₂
+@inbounds function ParRep.check_dephasing!(checker::HarmonicDiagnostic,replicas,current_macrostate,step_n)
+    return step_n*checker.dt*checker.λ₂[current_macrostate]> checker.n 
+end
+
+
 ### Entropic switch
 
 """
@@ -80,22 +106,40 @@ Gradient of the potential energy function.
 grad_entropic_switch(q) = begin X = zeros(2); drift_entropic_switch!(X,-1); return X end
 
 
-###
+struct PolyhedralStateChecker{T}
+    α::Matrix{T}
+end
 
+PolyhedralStateChecker(β,m) = begin
+    α = [0 m/√(β*λs_saddles[J[1,2]]) m/√(β*λs_saddles[J[1,3]]);
+    m/√(β*λs_saddles[J[2,1]]) 0 m/√(β*λs_saddles[J[2,3]]);
+    m/√(β*λs_saddles[J[3,1]]) m/√(β*λs_saddles[J[3,2]]) 0]
 
-### Polyhedral states
-const minima = [-1.0480549928242202 0.0 1.0480549928242202; -0.042093666306677734 1.5370820044494633 -0.042093666306677734]
-const saddles = [-0.6172723078764598 0.6172723078764598 0.0; 1.1027345175080963 1.1027345175080963 -0.19999999999972246]
-const pos_eigvecs = [0.6080988038706289 -0.6080988038706289 -1.0; 0.793861351075306 0.793861351075306 0.0]
+    return PolyhedralStateChecker(α)
+end
+#δ ≫ 1/√(βκ)
 
+function ParRep.get_macrostate!(checker::PolyhedralStateChecker,walker,current_state,step_n)
+    if current_state === nothing
+        for i=1:3
+            is_in_i = true
 
-struct PolyhedralStateChecker end
+            for j=i+1:3
+                is_in_i = is_in_i && (σ[i,j]*dot(walker-saddles[:,J[i,j]],neg_eigvecs[:,J[i,j]]) < 0)
+            end
 
-function ParRep.get_macrostate!(checker::PolyhedralStateChecker,walker,current_state)
-    l1,l2,l3 =[(walker-saddles[:,i])'pos_eigvecs[:,i] for i=1:3]
-    (l1 <= 0) && (l3 >= 0) && return 1
-    (l1 >= 0) && (l2 >= 0) && return 2
-    (l3 <= 0) && (l2 <= 0) && return 3
+            (is_in_i) && return i
+        end
+
+    end
+
+    i = current_state
+
+    for j=1:3
+        (j != i) && (σ[i,j]*dot(walker-saddles[:,J[i,j]],neg_eigvecs[:,J[i,j]]) >= checker.α[i,j]) && return j
+    end
+
+    return i
 end
 
 Base.@kwdef struct EMSimulator{B,Σ,R}
@@ -108,7 +152,7 @@ Base.@kwdef struct EMSimulator{B,Σ,R}
     rng::R = Random.GLOBAL_RNG
 end
 
-function ParRep.update_microstate!(X,simulator::EMSimulator)
+function ParRep.update_microstate!(simulator::EMSimulator,X)
     for k=1:simulator.n_steps
         simulator.drift!(X,simulator.dt)
         simulator.diffusion!(X,simulator.dt,simulator.σ,simulator.rng)
@@ -139,17 +183,19 @@ ParRep.check_death(::ExitEventKiller,state_a,state_b,_) = (state_a != state_b)
 
 Base.@kwdef mutable struct TransitionLogger#{X}
     log_dir
-    filenames = (state_from = "state_from.int64",state_to = "state_to.int64", transition_time = "transition_time.int64", dephased = "dephased.bool",exit_configuration = "exit_configuration.vec2dfloat64")
+    filenames = (states = "states.int64", transition_times = "transition_times.int64", dephased = "dephased.bool",exit_configurations = "exit_configurations.vec2dfloat64",parallel_ticks="parallel_ticks.int64",dephasing_ticks="dephasing_ticks.int64",initialization_ticks="initialization_ticks.int64")
     file_streams = [open(joinpath(log_dir,f),write=true) for f in filenames]
 end
 
 function ParRep.log_state!(logger::TransitionLogger,step; kwargs...)
     if step == :transition
         write(logger.file_streams[1],kwargs[:current_macrostate])
-        write(logger.file_streams[2],kwargs[:new_macrostate])
-        write(logger.file_streams[3],kwargs[:exit_time]+kwargs[:dephasing_time])
-        write(logger.file_streams[4],kwargs[:exit_time] != 0)
-        write(logger.file_streams[5],kwargs[:algorithm].reference_walker)
+        write(logger.file_streams[2],kwargs[:exit_time]+kwargs[:dephasing_time])
+        write(logger.file_streams[3],kwargs[:exit_time] != 0)
+        write(logger.file_streams[4],kwargs[:algorithm].reference_walker)
+        write(logger.file_streams[5],kwargs[:algorithm].n_parallel_ticks)
+        write(logger.file_streams[6],kwargs[:algorithm].n_dephasing_ticks)
+        write(logger.file_streams[7],kwargs[:algorithm].n_initialisation_ticks)
     end
 end
 
@@ -158,32 +204,35 @@ end
 function main()
     n_replicas = 32
     #logger = TransitionLogger{MVector{2,Float64}}()
-    log_dir = "logs_0.1"
+    log_dir = "logs_overlap_3.0"
+    if !isdir(log_dir)
+        mkdir(log_dir)
+    end
+    β = 4.0
+    dt=1e-3
     logger = TransitionLogger(log_dir=log_dir)
-    ol_sim = EMSimulator(dt = 1e-3,β = 4.0,drift! = drift_entropic_switch!,diffusion! = overdamped_langevin_noise!,n_steps=1)
-    state_check = PolyhedralStateChecker()
-    gelman_rubin = GelmanRubinDiagnostic(observables=[(x,i)->sum(abs,x-minima[:,i])],num_replicas=n_replicas,tol=0.05)
+    ol_sim = EMSimulator(dt = dt,β = β,drift! = drift_entropic_switch!,diffusion! = overdamped_langevin_noise!,n_steps=1)
+    state_check = PolyhedralStateChecker(β,3.0)
+    harm_check = HarmonicDiagnostic(λ₂=[8.472211868406559,3.7983868797287945,8.472211868406559],n=10,dt=dt)
+    # gelman_rubin = GelmanRubinDiagnostic(observables=[(x,i)->sum(abs,x-minima[:,i])],num_replicas=n_replicas,tol=0.05)
 
 
     alg = GenParRepAlgorithm(N=n_replicas,
                             simulator = ol_sim,
-                            dephasing_checker = gelman_rubin,
+                            dephasing_checker = harm_check,
                             macrostate_checker = state_check,
                             replica_killer = ExitEventKiller(),
                             logger = logger,
-                            reference_walker = @MVector [minima[1,1],minima[1,2]])
+                            reference_walker = copy(minima[:,1]))
 
 
-    if !isdir(log_dir)
-        mkdir(log_dir)
-    end
 
-    n_transitions = 500
+    n_transitions = 1_000_000
     freq_checkpoint = 100
 
    for k=1:(n_transitions ÷ freq_checkpoint)
         println(k)
-        ParRep.simulate!(alg,freq_checkpoint;verbosity=1)
+        ParRep.simulate!(alg,freq_checkpoint;verbose=true)
 
         for fstream in logger.file_streams
             flush(fstream)
@@ -227,4 +276,3 @@ end
 # end
 
 @time main()
-@time 
