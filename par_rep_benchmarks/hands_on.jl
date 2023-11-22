@@ -220,7 +220,7 @@ function main()
     logger = TransitionLogger(log_dir=log_dir)
     ol_sim = EMSimulator(dt = dt,β = β,drift! = drift_entropic_switch!,diffusion! = overdamped_langevin_noise!,n_steps=1)
     state_check = PolyhedralStateChecker(β,α_overlap)
-    harm_check = HarmonicDiagnostic(λ₂=[8.472211868406559,3.7983868797287945,8.472211868406559],n=m_sg,dt=dt)
+    harm_check = HarmonicDiagnostic(λ₂=[8.472211868406559,3.7983868797287945,8.472211868406559],m=m_sg,dt=dt)
     # gelman_rubin = GelmanRubinDiagnostic(observables=[(x,i)->sum(abs,x-minima[:,i])],num_replicas=n_replicas,tol=0.05)
 
 
