@@ -204,12 +204,12 @@ end
 function main()
     n_replicas = 32
     #logger = TransitionLogger{MVector{2,Float64}}()
-    log_dir = "logs_overlap_3.0"
+    log_dir = "logs_overlap_4.0"
     if !isdir(log_dir)
         mkdir(log_dir)
     end
     β = 4.0
-    dt=1e-3
+    dt=5e-3
     logger = TransitionLogger(log_dir=log_dir)
     ol_sim = EMSimulator(dt = dt,β = β,drift! = drift_entropic_switch!,diffusion! = overdamped_langevin_noise!,n_steps=1)
     state_check = PolyhedralStateChecker(β,3.0)
