@@ -205,7 +205,7 @@ function main()
     println("Usage: N_replicas β dt overlap m_spectral_gaps n_transitions checkpoint_freq")
 
     n_replicas = parse(Int64,ARGS[1])
-    β = parse(Int64,ARGS[2])
+    β = parse(Float64,ARGS[2])
     dt = parse(Float64,ARGS[3])
     α_overlap = parse(Float64,ARGS[4])
     m_sg = parse(Float64,ARGS[5])
