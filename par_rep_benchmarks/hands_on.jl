@@ -217,6 +217,8 @@ function main()
         mkdir(log_dir)
     end
 
+    λ2s = (α_overlap > 0.0) ? [min(λs_minima[i],λs_saddles[J[i,1:3 .!== i]]...) for i=1:3] : [min(λs_minima[i],2λs_saddles[J[i,1:3 .!== i]]...) for i=1:3]
+
     logger = TransitionLogger(log_dir=log_dir)
     ol_sim = EMSimulator(dt = dt,β = β,drift! = drift_entropic_switch!,diffusion! = overdamped_langevin_noise!,n_steps=1)
     state_check = PolyhedralStateChecker(β,α_overlap)
