@@ -1,0 +1,1087 @@
+\documentclass[10pt]{article}
+
+\usepackage[utf8]{inputenc}
+
+\usepackage{caption}
+% \usepackage{subcaption}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{todonotes}
+
+\usepackage{amsmath,amsthm} 
+\usepackage{amssymb,mathrsfs} 
+\usepackage{a4wide} 
+\usepackage{graphicx}
+\usepackage{physics}
+\usepackage{color,subfigure} 
+\usepackage{enumerate}
+\usepackage[normalem]{ulem}
+\usepackage{cancel}
+\usepackage{bbm}
+\usepackage{tikz}
+\usepackage{hyperref}
+\usepackage{nccmath}
+\usepackage{mathtools}
+\usepackage{todonotes}
+
+%% custom commands
+\newcommand{\cL}{\mathcal{L}}
+\renewcommand{\d}{\mathrm{d}}
+\newcommand{\e}{\mathrm{e}}
+\newcommand{\E}{\mathbb{E}}
+\renewcommand{\P}{\mathbb{P}}
+\renewcommand{\div}{\mathrm{div}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\n}{\mathrm{n}}
+
+\newcommand{\uonetilde}{\widetilde{u}_{1,\beta}^{h_0,h_1}}
+\newcommand{\uone}{u_{1,\beta}^{h_0,h_1}}
+\newcommand{\utwo}{u_{2,\beta}^{h_0,h_1}}
+\newcommand{\utwotilde}{\widetilde{u}_{2,\beta}^{h_0,h_1}}
+\newcommand{\psitilde}{\widetilde\psi}
+
+\newcommand{\lambdaonetilde}{\widetilde{\lambda}_{1,\beta}^{h_0,h_1}}
+\newcommand{\lambdaone}{\lambda_{1,\beta}^{h_0,h_1}}
+\newcommand{\lambdatwo}{\lambda_{2,\beta}^{h_0,h_1}}
+\newcommand{\lambdatwotilde}{\widetilde{\lambda}_{2,\beta}^{h_0,h_1}}
+\newcommand{\Hess}{\mathrm{Hess}\,}
+\newcommand{\N}{\mathbb N}
+\newcommand{\1}{\mathbbm 1}
+\newcommand{\supp}{\mathrm{supp}}
+
+\newcommand{\deltai }{\delta^{(i)}}
+\renewcommand{\o}{\mathrm{o}}
+\newtheorem{lemma}{Lemma}
+\newtheorem{conjecture}{Conjecture}
+\newtheorem{theorem}{Theorem}
+\newtheorem{corollary}{Corollary}
+\newtheorem{proposition}{Proposition}
+\newtheorem{definition}{Definition}
+
+\title{Low-temperature asymptotics of the Dirichlet spectrum for a Fokker-Planck operator in temperature-dependent domain.}
+
+% \todo[inline]{Trouver un titre plus "commercial"}
+\author{No\'e Blassel}
+\begin{document}
+\maketitle
+
+    % \section{The problem}
+    %     We consider~$\Omega\subset \R^d$ an open bounded domain with smooth boundary,~$V\in \mathcal C^\infty (\overline \Omega)$, and~$\beta>0$.
+    %     The interpretation of~$\Omega$ is that of a region of some larger configurational space, which is metastable for the dynamics
+    %     \[\d X_t = -\nabla V(X_t)\,\d t + \sqrt{\frac2\beta}\, \d W_t,\]
+    %     say, for simplicity, that~$V$ has a unique minimum~$x_*$ in~$\Omega$.
+    %     Define its generator
+    %     \[-\cL_\beta u = \nabla V \cdot \nabla - \frac1\beta \Delta,\]
+    %     which we will consider to be operator acting on the weighted~$L^2$ space
+    %     \[L^2_\mu(\Omega) = \left\{ v : \int_\Omega v^2 \e^{-\beta V} < \infty\right\},\]
+    %     and endow it with Dirichlet boundary conditions:
+    %     \[ \mathcal D(\cL_\beta) = H_{0,\mu}^1(\Omega)\cap H^2_\mu(\Omega).\]
+    %     It is standard that~$\cL$ is positive, self-adjoint with compact resolvent, and thus its spectrum consists of real eigenvalues
+    %     \[ 0 <  \lambda_1 < \lambda_2 \leq \]
+    %     tending to~$\infty$.
+
+    %     The probability density of the QSD on~$\Omega$ is proportional to
+    %     \[\e^{-\beta V}u_1,\,\text{in }\Omega,\]
+    %     with~$u_1$ the solution to the eigenproblem
+    %     \[-\cL_\beta u = \lambda u,\quad u\in H_{0,\mu}^1(\Omega),\]
+    %     corresponding to the smallest eigenvalue~$\lambda_1$, which corresponds to the exit rate from~$\Omega$ starting from an initial condition distributed according to the QSD.
+
+    %     The problem is that of identifying the domain~$\Omega$ for which the parallel replica algorithm is optimally efficient. 
+    %     As the gain comes from the parallel exit step from the QSD, one wants to spend as much physical time in this step, or other words one wishes to minimize the exit rate~$\lambda_1$. 
+    %     On the other hand, if one enlarges the domain too much, metastability inside~$\Omega$ can become an issue, which will translate into a small relaxation rate~$\lambda_2 - \lambda_1$ to the QSD.
+    %     Balancing these considerations motivate considering the objective function 
+    %     \[\tilde J = \frac{\lambda_1}{\lambda_2-\lambda_1}.\]
+    %     Equivalently, we minimize
+    %     \[ J = \frac{\lambda_1}{\lambda_2}.\]
+    %     Loosely, minimizing~$J$ with respect to~$\Omega$ yields a domain for which ParRep spends the smallest proportion of physical time in the decorrelation/dephasing step.
+    %     Using shape optimization techniques, it can be shown that any locally optimal domain satisfies a relation on the normal derivatives of the first two eigenpairs of~$-\cL_\beta$:
+    %     \[ \lambda_2\left(\frac{\partial u_1}{\partial n}\right)^2 = \lambda_1 \left(\frac{\partial u_2}{\partial n}\right)^2\qquad\text{on } \partial\Omega.\]
+
+    %     In small dimensions, one can use this relation to implement gradient descent methods to optimize the domain, however this procedure is intractable for realistically-dimensioned systems.
+    %     However, numerical experiments in small dimensions show that the optimum value of~$J$ is attained by slightly fattenning the basin of attraction of~$x_*$ for the gradient dynamics
+    %     \[ \dot X = -\nabla V(X).\]
+
+    % \section{A model problem in 1D}
+
+    % Consider a~$\mathcal C^\infty$ potential~$V:[a,b]\to \mathbb R$. Assume:
+
+    % \begin{enumerate}
+    %     \item $V$ has exactly three critical points~$z_0 < x_* < z_1$ in~$(a,b)$.
+    %     \item $V$ has a global minimum at~$x_*$, with~$\kappa_* = V''(x_*)>0$.
+    %     \item $V$ has non-degenerate saddle points~$z_0,z_1$. We denote $$\kappa_0=-V''(z_0),\quad\kappa_1=-V''(z_1),$$ which are strictly positive.
+    %     \item $V(x_*) < \min(V(a),V(b))$.
+    % \end{enumerate}
+
+    % We denote by~$\mu_\beta(\mathrm d x) = \mathrm e^{-\beta V(x)}\,\mathrm d x$ the (unnormalized) Gibbs measure, and consider the generator of the killed overdamped Langevin dynamics:
+    % \[-\cL_\beta^{h_0,h_1} =  V' \partial_x - \beta^{-1}\partial_{xx}\]
+    % acting on the weighted Hilbert space~$L^2_{\mu_\beta}(a,b)$, with domain $$\mathcal{D}(\cL_\beta^{h_0,h_1})=H_0^1(z_0-h_0,z_1+h_1) \cap H^2(z_0-h_0,z_1+h_1).$$ This operator is definite positive, self-adjoint with compact resolvent, and we denote
+    % $$ 0 < \lambda_{1,\beta}^{h_0,h_1} < \lambda_{2,\beta}^{h_0,h_1} \leq \dotsm $$
+    % its eigenvalues, and choose $u_{k,\beta}^{h_0,h_1}\in \mathcal{D}(\cL_{\beta}^{h_0,h_1})$ such that
+    % \[-\cL_{\beta}^{h_0,h_1}u_{k,\beta}^{h_0,h_1} = \lambda_{k,\beta}^{h_0,h_1} u_{k,\beta}^{h_0,h_1},\qquad \|u_{k,\beta}^{h_0,h_1}\|_{L_{\mu_\beta}^2(a,b)}=1.\]
+
+    % Denote by
+    % $$\langle \cdot ,\cdot\rangle_{\mu_\beta},\quad \|\cdot\|_{\mu_\beta},$$
+    % the~$L^2_{\mu_\beta}(a,b)$ scalar product and norm.
+
+    % \section{Conjectures}
+    % We list some conjectures based on numerical evidence about the asymptotic behavior of the first two eigenvalues and their associated eigenvectors.
+    % \begin{conjecture}\label{conj:lambda1}
+    %     Let~$0<\delta<\frac12$,~$ z_0-a > h_0 > (\beta\kappa_0)^{\delta-\frac12}$,~$b-z_1>h_1>(\beta\kappa_1)^{\delta-\frac12}$.
+    %      Then~$\lambda_{1,\beta}^{h_0,h_1},$ is asymptotically equivalent as~$\beta\to\infty$ to
+    %     \begin{equation}
+    %         \left\{
+    %             \begin{aligned}
+    %                 \frac{\sqrt{\kappa_0\kappa_*}}{2\pi}\e^{-\beta(V(z_0)-V(x_*))},&\quad V(z_0) < V(z_1),\\
+    %                 \frac{\sqrt{\kappa_1\kappa_*}}{2\pi}\e^{-\beta(V(z_1)-V(x_*))},&\quad V(z_0) > V(z_1),\\
+    %                 \frac{\sqrt{\kappa_0\kappa_*}+\sqrt{\kappa_1\kappa_*}}{2\pi}\e^{-\beta(V(z_0)-V(x_*))},& \quad V(z_0) = V(z_1).
+    %             \end{aligned}
+    %         \right.
+    %     \end{equation}
+
+    % The first-order asymptotics of~$\lambda_{1,\beta}^{0,0}$ (the case with saddle points on the boundary) are computed in (Lelièvre-Le Peutrec-Nectoux 2022) in the multidimensional setting with a unique minimum of~$V$ on the boundary, and under some additional geometric assumptions.
+    % When~$V(z_0) < V(z_1)$, the content of this conjecture is that the prefactor is halved as soon as one considers a boundary which departs more than a distance~$(\kappa_0\beta)^{-\frac12}$ from the saddle point. 
+    % \end{conjecture}
+
+    % \begin{conjecture}\label{conj:lambda2}
+    %     The limit
+    %     \[\underset{\beta \to \infty}{\lim}\, \lambda_{2,\beta}^{0,0} = \lambda_{2,\infty} > 0\]
+    %     is well-defined and furthermore,
+    %     \[\underset{\beta \to \infty}{\lim}\, \lambda_{2,\beta}^{z_0-a,b-z_1}  = \lambda_{2,\infty}.\]
+
+    %     An immediate corrolary is that for any~$0 < h_0 < z_0 -a$,~$0<h_1<b-z_1$,
+    %     \[\underset{\beta \to \infty}{\lim}\, \lambda_{2,\beta}^{h_0,h_1}  = \lambda_{2,\infty},\]
+    %     since eigenvalues are monotonous with respect to the domain by the Courant--Fischer principle.
+    % \end{conjecture}
+
+    % Proving these conjectures would provide an effective criterion to (approximately) maximize the parallel efficiency objective
+    % \[ J_{\beta}(h_0,h_1) = \frac{\lambda_{2,\beta}^{h_0,h_1}}{\lambda_{1,\beta}^{h_0,h_1}}\]
+    % in the vicinity of~$(0,0)$, since they would imply that~$J_\beta$ is asymptotically constant on $((\beta\kappa_0)^{\delta-\frac12},z_0-a)\times((\beta\kappa_1)^{\delta-\frac12},b-z_1)$, with value close to $2J_\beta(0,0)$.
+    
+    % On the other hand, one should choose $h_0,h_1$ as small as possible so as to minimize the overlap between metastable states, and to not degrade the prefactor in the relaxation time to the QSD, so that a practical choice
+    % \[h_{0,\beta} = \frac{K}{\sqrt{\beta \kappa_0}},\quad h_{1,\beta} = \frac{K}{\sqrt{\beta \kappa_1}},\]
+    % for some fixed possibly large~$K>0$ is likely reasonable.
+
+    % \section{Ideas for the proofs}
+    % We expect the proofs to rely on ideas from semi-classical analysis. A first step is to identify good quasi-modes for~$u_{1,\beta}^{h_0,h_1}$ and~$u_{2,\beta}^{h_0,h_1}$.
+    % Numerical experiments show:
+    % \begin{itemize}
+    %     \item The derivative~$\partial_x u_{1,\beta}^{h_0,h_1}$ is well-approximated by a difference of two Gaussian densities centered on $z_0,z_1$ with respective variances~$(\beta\kappa_0)^{-1},(\beta\kappa_1)^{-1}$
+    %     \item The second eigenvector~$u_{2,\beta}^{h_0,h_1}$ can also be well-approximated by a linear combination of two Gaussian densities centered on $z_0,z_1$, and in the non-degenerate case~$V(z_0)<V(z_1)$, the dominant density is centered on $z_0$ with variance~$(\beta\kappa_0)^{-1}$.
+    % \end{itemize}
+
+    % \subsection{Strategy for~$\uone$.}
+    % \paragraph{Definition of the Gaussian ansatz.}
+    % We define the difference of Gaussian densities
+    % \[f_\beta(x) = \sqrt{\frac{\beta\kappa_0}{2\pi}}\e^{-\frac{\beta\kappa_0(x-z_0)^2}2} - \sqrt{\frac{\beta\kappa_1}{2\pi}}\e^{-\frac{\beta\kappa_1(x-z_1)^2}2},\]
+    % and the following ansazt:
+    % \[\uonetilde(x) = \chi_\beta\int_{-\infty}^x f_\beta,\]
+    % where~$\chi_\beta \in \mathcal C^\infty_c(z_0-h_0,z_1+h_1)$, such that 
+    % \[ \mathbbm 1_{(z_0-\frac {h_0}2,z_1+\frac{h_1}2)} \leq \chi_\beta \leq 1,\]
+    % \[\mathrm{supp}(\chi_\beta') \subset (z_0-h_0,z_0-\frac{h_0}2) \cup (z_1 + \frac{h_1}2,z_1 + h_1).\]
+    % By considering a mollification of an appropriate piecewise-linear function, we may assume that
+    % \[C_\beta = \|\chi_\beta'\|_\infty \leq 3\max(h_0^{-1},h_1^{-1}) = \o( \beta^{\frac12}),\]
+    % under the assumptions of Conjecture~\ref{conj:lambda1} on~$h_0$ and~$h_1$.
+
+    % \paragraph{Asymptotic upper bound on~$\lambda_{1,\beta}^{h_0,h_1}$.}
+    % Since~$\uonetilde \in \mathcal D(\cL_\beta^{h_0,h_1})$, the first eigenvalue is bounded by the Rayleigh quotient
+    % \[ \lambda_{1,\beta}^{h_0,h_1} \leq \widetilde{\lambda}_{1,\beta}^{h_0,h_1} = R_\beta^{h_0,h_1}(\uonetilde)=\frac{\displaystyle{\int_a^b \left(\partial_x \uonetilde\right)^2\e^{-\beta V} }}{\displaystyle{\beta \int_a^b \left(\uonetilde\right)^2\e^{-\beta V}}}.\]
+    % We compute the dominant behavior for this ratio using Laplace asymptotics.
+
+    % To treat the denominator, observe~$\uonetilde$ converges pointwise almost everywhere to~$\mathbbm 1_{(z_0,z_1)}$, so that the classical Laplace method yields the asymptotic equivalent
+    % \[\int_a^b \left(\uonetilde\right)^2\e^{-\beta V} \sim \sqrt{\frac{2\pi}{\beta \kappa_*}}\e^{-\beta V(x_*)}.\]
+
+    % The numerator writes
+    % \[\int_a^b \left(\partial_x \uonetilde\right)^2\e^{-\beta V} = \int_a^b \left[\chi_\beta^2 f_\beta^2 + 2\chi_\beta\chi_\beta'f_\beta\uonetilde + \chi_\beta'^2\left(\uonetilde\right)^2\right]\e^{-\beta V}.\]
+    % We aim to show that only the leftmost term inside the bracket contributes in the limit~$\beta\to\infty$.
+
+    % \paragraph{Asymptotic lower bound via a resolvent estimate.}
+    % The next step is to show that~$\uonetilde$ is close to its~$L^2_{\mu_\beta}$ projection onto~$\mathrm{Span}(\uone)$.
+    % Using the asymptotic upper bound~$\lambdaone < c_\beta$, say the circle passing through $0$ and $c_\beta$. Write this projection as
+    % \[\frac{\mathrm i}{2\pi} \oint_\gamma \left( \cL_\beta^{h_0,h_1} + z\right)^{-1}\,\d z,\]
+    % with~$\gamma$ a contour enclosing~$\lambdaone$. This expression may prove useful to estimate
+    % \begin{equation}
+    %     \label{eq:resolvent_estimate}
+    %     \|\uonetilde - \Pi_{\beta,[0,c_\beta]}^{h_0,h_1}\uonetilde\|_{\mu_\beta}^2,
+    % \end{equation}
+    % where we denote by~$\Pi_{\beta,\cdot}^{h_0,h_1}$ the spectral family associated with~$\cL_\beta^{h_0,h_1}$. This in turn allows to bound the distance of
+    % \[R_\beta^{h_0,h_1}(\uonetilde)\]
+    % to the spectrum of~$\cL_\beta^{h_0,h_1}$.
+
+    % An issue is to confirm that there is only one small eigenvalue.
+
+    % \subsection{Strategy for~$\utwo$.}
+    % Assume for simplicity that~$V(z_0) < V(z_1)$.
+    % A first step would be to consider
+    % \[g_\beta(x) = \sqrt{\frac{\beta\kappa_0}{2\pi}}\e^{-\frac{\beta\kappa_0(x-z_0)^2}2},\]
+    % and define the following guess
+    % $$\utwotilde = \chi\left( g_\beta - \frac{\left\langle g_\beta,\uonetilde\right\rangle_{\mu_\beta}}{\|\uonetilde\|^2_{\mu_\beta}}\uonetilde\right).$$
+    % Since this is not properly orthogonal to~$\uone$, estimating the Rayleigh quotient~$R_\beta^{h_0,h_1}(\utwotilde)$ does not immediately yield an upper bound, but a good estimate for~\eqref{eq:resolvent_estimate} should nevertheless allow one to deduce an upper bound.
+    % A big issue is to show that~$\lambda_{2,\beta}^{h_0,h_1}$ is simple and isolate it from the rest of the spectrum.
+    \tableofcontents
+
+    \section{Setting}
+
+    We consider a potential function, $V : \R^d \to \R$, which we assume to be smooth.
+    We are interested in understanding the behavior of metastable exit and relaxation times for the overdamped Langevin dynamics
+    \begin{equation}
+        \label{eq:overdamped_langevin}
+        \d X_t = -\nabla V(X_t)\,\d t + \sqrt{\frac2\beta}\, \d W_t,
+    \end{equation}
+    when the trajectories of the process are conditioned to remaining inside a potential well for a long time.
+    The full unconditionned process \eqref{eq:overdamped_langevin} is ergodic for the Gibbs measure
+    \[\mu(\d x) = Z_\beta^{-1}\e^{-\beta V(x)}\,\d x.\]
+    We associate with this probability measure the weighted Sobolev spaces, defined, for $\Omega\subset \R^d$ any open domain by:
+    \begin{equation}
+        \label{eq:sobolev_spaces}
+        L_\mu^2(\Omega) = \left\{u:\,\int_{\Omega} u^2 \,d\mu < +\infty\right\},\qquad H^{k}_\mu(\Omega) = \{u\in L^2_\mu(\Omega):\,\partial^{\alpha}u\in L^2_\mu(\Omega),\,\forall\, |\alpha|\leq k\},
+    \end{equation}
+    where $\partial^\alpha$ denotes the weak differentation operator associated to a multi-index $\alpha$. Finally let $H_{0,\mu}^k(\Omega)$ denote the $H^k(\Omega)$ norm-closure of $\mathcal C^\infty_c(\Omega)$.
+
+    The infinitesimal generator for the dynamics is defined by the differential operator:
+    \begin{equation}
+        \label{eq:generator}
+        -\cL_\beta u = \nabla V \cdot \nabla u - \frac1\beta \Delta u=,\, u \in \mathcal C^\infty_c(\R^d).
+    \end{equation}
+
+    The problem we consider here is that of computing low-temperature spectral asymptotics for the Dirichlet problem associated with the generator, for a domain which depends on the inverse temperature $\beta$.
+    To this effect, we consider a non-increasing family of open, bounded, simply connected domains
+    \[(\Omega_\beta)_{\beta \geq 0},\]
+    and consider, for $\beta>0$, the spectrum of Dirichlet realization $-\cL_\beta^D$, whose domain is $H_{0,\mu}^1\cap H^2_{\mu}(\Omega_\beta) \subset L^2_\mu(\Omega_\beta)$,
+    and whose action is defined formally by~\eqref{eq:generator}.
+    The operator $-\cL_\beta^D$ is known to be self-adjoint, with compact resolvent, so that its spectrum is comprised of a sequence of non-negative, isolated eigenvalues of finite multiplicity, thus tending to $+\infty$.
+    $$0\geq\lambda_{1,\beta} \leq \lambda_{2,\beta}\leq \dotsm \leq\lambda_{N,\beta} \underset{N\to\infty}{\longrightarrow}+\infty.$$
+    Furthermore, since $\Omega_\beta$ is bounded for all $\beta$, one can show that the first eigenvalue is simple and strictly positive, so that $0<\lambda_{1,\beta} < \lambda_{2,\beta}$, with $\dim \ker \left(-\cL_\beta-\lambda_{1,\beta}\right)=1$.
+
+    \subsection{Hypotheses on $V$ and the domains $\Omega_\beta$.\newline}
+    
+    We are specifically interested in studying the case in which all the domains encompass one potential well of $V$, which furthermore contain every saddle point connecting it to some other well in their closure.
+    Loosely, one should think of $\Omega_\beta$ as a positive temperature outward perturbation of the bassin of attraction attached to the bottom of the well for the steepest descent dynamics
+    \begin{equation}
+        \label{eq:gradient_flow}
+        \dot X = -\nabla V(X).
+    \end{equation}
+    We formalize the setting using the following assumptions:
+
+    \begin{enumerate}[i)]
+        \item{The potential $V$ is a $\mathcal C^\infty$ Morse function on $\overline{\Omega}_0$, such that $z_0 \in \Omega_0$ is the unique (local and global) minimum of $V$ on $\overline{\Omega}_0$.}
+        \item{Define the bassin of attraction for $z_0$ as the set
+        \begin{equation}
+            \label{eq:basin}
+            \mathbf{B} = \left\{ x \in \R^d:\,\underset{t\to\infty}{\lim}\,\phi_t(x) = z_0\right\},
+        \end{equation}
+        where $(\phi_t)_{t\geq 0}$ is the flow associated with the steepest descent dynamics~\eqref{eq:gradient_flow},
+        and 
+        $$ \Omega_\infty = \bigcap_{\beta\geq 0}\Omega_\beta.$$
+        Assume that $\mathbf{B} \subset \overline{\Omega}_\infty$.
+        \todo[inline]{probablement pas nécessaire tant qu'on contient le puits $\{f< \min_i V(z_i)\}$}}
+        \item{For all $\beta>0$, the boundaries $\partial \Omega_\beta$ are $C^1$ submanifolds of $\R^d$, and the domains non-increasing: \[\beta_1 > \beta_2 \implies \Omega_{\beta_1} \subseteq \Omega_{\beta_2}.\] }
+        \item{For all $z\in\overline{\Omega}_0$ such that $z$ is a order-one saddle point of $V$, $z\in\overline{\mathbf{B}}$.}
+        \item{We denote by $\mathrm{n}_{\beta}: \partial \Omega_\beta \to \R^d$ the outward normal to $\Omega_\beta$. We assume:
+        \begin{equation}\forall\,\beta>0,\,\forall\,x \in \partial\Omega_\beta, \mathrm{n}_{\beta}\cdot \nabla V (x) \leq 0.\end{equation} }
+    \end{enumerate}
+    \todo[inline]{v) $\implies$ ii)}
+    Let us make a few informal comments about these hypotheses. Assumption i) expresses the fact that we specialize our study to the one-well setting, where the well is attached to the minimum $x_0$.
+    Combined with ii), it implies that there exists $\varepsilon_0>0$ such that for all $\beta>0$, a coreset $B(z_0,\varepsilon_0)$ is strictly contained in $\Omega_\beta$. 
+    The standard numerical practice is to take the basin of attraction $\mathbf{B}$ as a definition of the well, and thus as a metastable domain, independently of $\beta$. We can of course recover this case by setting $\Omega_\beta = \mathbf B$ for all $\beta>0$.
+    Assumption ii) expresses the fact that every domain indeed contains the well $\mathbf{B}$, while iii) expresses the fact that the domains contract as the temperature decreases.
+    Assumption iv) guarantees that any first-order saddle point is associated with an exit from $\mathbf B$, and indeed by ii) that all such exits are in $\overline\Omega_\beta$, for any $\beta>0$.
+    Finally, v) expresses the fact that the steepest descent-dynamics ``spills out" at the boundary of the domain.
+    \todo[inline]{Defricher ce qu'il faut prouver/ Formaliser/ mettre dans un lemme}
+    Let $z_0,\dotsm,z_{m+r}$ denote the critical points of $V$ in $\overline{\Omega}_\infty$, where $z_1,\dotsm,z_m$ are the order-one saddle points. 
+    By assumption i) all these critical points are non-degenerate, by which we mean that the eigenvalues
+    \begin{equation}
+        \label{eq:eigvals_hessian}
+        \sigma(\Hess V(z_i)) = \{\nu_1^{(i)} \leq \nu_2^{(i)} \leq \dotsm \leq \nu_d^{(i)}\}
+    \end{equation}
+    of the Hessian of $V$ at $z_i$ are non-zero for all $i$, with
+    \begin{equation}
+        \label{eq:eigvecs_hessian}
+        U^{(i)} =\begin{pmatrix}v_1^{(i)}&\dotsm&v_d^{(i)}\end{pmatrix},\quad \mathrm{diag}(\nu_1^{(i)},\dotsm,\nu_d^{(i)}) = U^{(i)\intercal} \Sigma^{(i)} U^{(i)}.
+    \end{equation}
+    the associated orthonormal eigenbasis.
+    Our analysis of the smallest eigenvalue is heavily inspired by the quasimodal construction performed in~\cite{LPN21}. For this reason, we will make the following assumption on the local geometry of the domains around each order-one saddle point, which furthermore fixes the orientation convention for the eigenvector $v_1^{(i)}$, which points towards $\partial \Omega_\beta$.
+    
+    We assume that, there exists a positive number $\delta>0$ and functions~$\deltai :\R_+^*\to\R_+$ such that the domain $\Omega_\beta$ contains a box neighborhood of the saddle point, which furthermore touches the boundary in the unstable direction:
+    \begin{equation}
+        \label{eq:box_neighborhoods_saddles}
+        R_\beta^{(i)} = z_i + U^{(i)\intercal}\left[(-\delta,\deltai (\beta)\land\delta)\times(-\delta,\delta)^{d-1}\right] \subset \Omega_\beta,\quad z_i +\deltai (\beta)v_1^{(i)} \in \partial\Omega_\beta\,\text{if $\deltai  < \delta$ },\,\forall\, \beta >0.
+    \end{equation}
+    \todo[inline]{Dessins...}
+    Note that, for $\deltai <\delta$, $d(z_i,\partial\Omega_\beta^{(i)}) = \deltai (\beta)$ and $\partial\Omega_\beta$ is tangent to $z_i + \deltai (\beta)v_1^{(i)\perp}$. 
+    The assumption that the $\Omega_\beta$ are non-increasing implies that, $\beta \mapsto \delta^{(i)}(\beta)$ is also non-increasing for all $i$.
+    We will use the following terminology to distinguish between different scalings 
+    \begin{itemize}
+        % \item The case $\deltai  = 0$ for $\beta>0$ large enough. To simplify matters we will simply consider in this case that $z_i\in \partial \Omega_\beta$ for all $\beta>0$. Since we are interested in asymptotic behaviour as $\beta\to \infty$, this incurs no cost of generality.
+        \item If $\underset{\beta\to\infty}{\lim}\,\sqrt{\beta}\deltai(\beta)  = 0$, we say that $z_i$ is a {\bf subcritical} saddle-point.
+        \item If $\underset{\beta\to\infty}{\lim}\,\sqrt{\beta}\deltai(\beta)  = \alpha\left|\nu_1^{(i)}\right|^{-\frac12} >0$, it is a {\bf critical} saddle-point.
+        \item If $\underset{\beta\to\infty}{\lim}\,\sqrt{\beta}\deltai(\beta)  = +\infty$, it is a {\bf supercritical} saddle-point.
+    \end{itemize}
+    Note that $\left({\beta\left|\nu_1^{(i)}\right|}\right)^{-\frac12}$ is the standard deviation of the Gaussian approximation to $x \mapsto \e^{\beta V(z_i + x v_1^{(i)})}$, which motivates this choice of terminology.
+    In the case in which $z_i$ is not an order-one saddle point, we still assume that $\Omega_\beta$ contains a box neighborhood of $z_i$, uniformly in the temperature:
+    \begin{equation}
+        \label{eq:box_neighborhoods_extrema} % named with 2D in mind
+         R^{(i)} = z_i + U^{(i)}(-\delta,\delta)^d \subset \Omega_\beta\,\quad \forall\,\beta>0.
+    \end{equation}
+    (the case $i=0$ follows directly from assumptions i and ii ).
+    \todo[inline]{En fait cette hypothese est seulement nécessaire pour avoir l'approximation harmonique , a terme, organiser/nommer hypotheses + les invoquer au moment d'énoncer les théorèmes}
+
+    % We then make the following further assumptions:
+    % \begin{itemize}
+    %     \item (coreset) There exists $r>0$ such that \[\varepsilon_\beta^{(0)} > r.\]
+    %     \item (spill out in unstable direction) In the (sub)critical case, $\varepsilon_\beta^{(i)} \to 0$ as $\beta\to\infty$. Denoting then by $v_1^{(i)}$ an eigenvector of $\nabla^2 V(z_i)$ associated with the unique negative eigenvalue, we assume that $v_1^{(i)} \sim\mathrm{n}_{\partial\Omega_\beta}(x_\beta)$ in the sense of essential convergence, for any $(x_\beta)_{\beta\geq 0}\in \prod_{\beta>0}\partial\Omega_\beta$ such that $\varepsilon_\beta^{(i)} = |x_\beta-z^{(i)}|$.
+    % \end{itemize}
+
+    % It is helpful to think loosely of $\Omega_\beta$ as a positive temperature perturbation of the bassin of attraction of $z_0$ for the steepest-descent dynamics $\dot X = - \nabla V(X)$.
+    % We define
+    % $$ \lambda_{1,\beta} \leq \lambda_{2,\beta} \leq \dotsm $$
+    % the sequence of eigenvalues of $-\cL_\beta$ on the domain $H_0^1\cap H^2(\Omega_\beta; \mu) \subset L^2_\mu$, for which it is self-adjoint with pure point spectrum.
+
+
+
+    \section{Coarse asymptotics of the spectrum using the harmonic approximation}
+
+    We first aim to extend the harmonic approximation~\cite[Theorem 11.1]{CFKS87} to the case of a temperature-dependent Dirichlet boundary condition.
+    More precisely, we aim to show that, for all integers $k\geq 1$,
+    $$\lambda_{k,\beta} = \lambda_{k}^{H} + e(\beta),\,e(\beta)\overset{\beta\to\infty}{\to}0,$$
+    where by $\lambda_k^{H}$ we denote the $k$-th eigenvalue of some temperature-independent operator \eqref{eq:global_harmonic_approximation}, the harmonic approximation to the Witten Laplacian, whose spectrum can be computed easily.
+
+    \subsection{Definition of the harmonic approximation}
+
+    This operator is obtained by considering local approximations around each critical point $z_i$, which are harmonic oscillators whose realization depends on the behavior of $\sqrt\beta\varepsilon_\beta^{(i)}$. Hence we define the following model spaces.
+    \begin{definition}
+        \label{def:model_spaces}
+        \begin{itemize} 
+            \item In the subcritical case: $$S^{(i)} = (-\infty,0)\times \R^{d-1}.$$
+            \item In the critical case: $$ S^{(i)} = (-\infty,\alpha_i)\times \R^{d-1},\,\alpha_i = \frac{\alpha}{\sqrt{|\nu_1^{(i)}|}} >0.$$
+            \item In the supercritical case: $$S^{(i)} = \R^d.$$
+        \end{itemize}
+    \end{definition}
+
+    \paragraph{Local harmonic models.\newline}
+    The potential part of $H_\beta = U_\beta - \Delta$, given by $U_\beta=\frac12\left(\beta^2\frac{|\nabla V|^2}2-\beta\Delta V\right)$, has wells around each critical point of $V$. Furthermore, these wells are separated by increasing barriers as $\beta\to\infty$, which motivates the study of local harmonic approximations of $H_\beta$ around each critical point of $V$.
+    To that effect, we define:
+    \[\Sigma^{(i)} = \frac12\Hess (\frac14|\nabla V|^2)(z_i)  = \frac12\left[\frac12 D^3 V \nabla V + \frac12 \left( \Hess V\right)^2 \right](z_i) = \frac14 \left(\Hess V\right)^2(z_i),\]
+    and let
+    \[\sigma(\Hess V(z_i)) = \{\nu_1^{(i)} \leq \nu_2^{(i)} \leq \dotsm \leq \nu_d^{(i)}\}\]
+    denote the eigenvalues of $\Hess V$ at $z_i$, with
+    \[U^{(i)} =\begin{pmatrix}v_1^{(i)}&\dotsm&v_d^{(i)}\end{pmatrix},\quad U^{(i)\intercal} \Sigma^{(i)} U^{(i)} = \frac14\mathrm{diag}\left[\left(\nu_j^{(i)}\right)^2,\,1\leq j\leq d\right] = \Lambda^{(i)}\]
+    the associated orthonormal eigenbasis, which induces a unitary transformation on $L^2$ via
+    $$ \mathcal U^{(i)} f(x) = f\left( U^{(i)\intercal}x\right),\quad \mathcal U^{(i)*} f(x) = f\left( U^{(i)}x\right).$$
+    Since the critical points are non-degenerate, $\nu_j^{(i)} \neq 0$ for all $1\leq j\leq d,\,0\leq i \leq m+r$, and $\nu_1^{i} < 0$ if and only if $i\geq 1$.
+    % Suppose $z_i \in \partial \Omega$ for some $i\geq 1$. In this case, assume that $v_1^{(i)}$ is the outward normal to $\Omega$ at $z_i$,
+    %  \todo[inline]{Preciser hypothese -- convergence de $v_1^{(i)}$ vers $\mathrm{n}_{\partial\Omega_\beta}(e_\beta(z^{(i)}))$ où $|x-e_\beta(x)|=d(x,\partial\Omega_\beta)$ ("on dépasse dans la direction instable")} and introduce the half-space
+    
+    We define local harmonic approximations to $H_\beta$ around each critical point:
+    \[ H_\beta^{(i)} = -\Delta + \beta^2 (x-z_i)^\intercal \Sigma^{(i)}(x-z_i) - \beta \frac{\Delta V(z_i)}2, \]
+    and the shifted harmonic oscillators:
+    \[K^{(i)} = -\Delta  + x^\intercal \Lambda^{(i)}x -\frac{\Delta V(z_i)}2.\]
+
+    By dilation $D_\lambda f(x) = \lambda^{d/2}f(\lambda x)$, translation $T_b f(x) = f(x-b)$ and orthogonal change of coordinates $\mathcal U^{(i)}$, a simple computation shows that
+    $H_{\beta}^{(i)}$ acting on $L^2(\Omega_\beta)$ is unitarily equivalent to~$\beta K^{(i)}$ acting on~$L^2(\sqrt{\beta}U^{(i)\intercal}(\Omega-z_i))$:
+    \[H_{\beta}^{(i)} = D_{\sqrt\beta}T_{\sqrt\beta z_i}\mathcal U^{(i)}\left(\beta K^{(i)}\right)\mathcal U^{(i)*}T_{-\sqrt\beta z_i}D_{1/\sqrt\beta}.\]
+
+    % $$\mathbb H_{-}^{(i)} = \left\{ x \in \R^d\, \middle|\, x\cdot v_1^{(i)} < 0 \right\}.$$
+    % \todo[inline]{Hypothese: $\Omega \cap \left[ z_i + T_{z_i} \partial \Omega \right] = \{z_i\}$}
+
+    \subsection{Spectra of the local oscillators.}
+    The advantage of working with the harmonic approximations $K^{(i)}$ is that their eigendecompositions can be written in terms of those of one-dimensional harmonic oscillators, which are either analytically known or easy to compute.
+    By $\sigma(K^{(i)})$, we denote the spectrum of the Dirichlet realization of the harmonic oscillator $K^{(i)}$ on $L^2(S^{(i)})$.
+
+    As a first step, we note the following result, which ensures that the $K^{(i)}$ have pure point spectra.
+
+    \begin{lemma}
+        The operator $K^{(i)}$ with domain $H_0^1\cap H^2(S^{(i)})$ is self-adjoint with compact resolvent.
+    \end{lemma}
+    \begin{proof}
+        % XIII.67 Reed-Simon, bug sur les domaines => passer par fomre quadratique + Friedrich pour écrire le domaine
+        % 2.10 Teschl
+        The assumption that $z_i$ is a non-degenerate critical point implies the case $S^{(i)}=\mathbb{R}^d$ by a standard result on Schrödinger operators (see \cite[Theorem 12. ...]{rs78}), as
+        $$W^{(i)}(x) := x^\intercal \Lambda^{(i)}x -\frac{\Delta V(z_i)}2, \underset{|x|\to\infty}{\longrightarrow} +\infty.$$
+        Thus it is enough to treat the case $S^{(i)} = (-\infty,\alpha)\times \R^{d-1}$, for some $\alpha \geq 0$.
+        
+        We start with the case $d = 1$.
+        For a function $f\in L^2(\R)$, we will use the notation 
+        $$\iota_\alpha f(x) = f(2\alpha- x)$$
+        for the reflection of $f$ across $\partial S^{(i)} = \{x=\alpha\}$. 
+        We consider now the Schrödinger operator on $L^2(\R)$ obtained by reflecting the potential through $\partial S^{(i)}$: 
+        $$\widetilde K^{(i)} = -\Delta + W^{(i)}{\mathbbm 1}_{x\leq \alpha}+\iota_\alpha W^{(i)}{\mathbbm 1}_{x > \alpha} = - \Delta + \widetilde W^{(i)}.$$ 
+        Since $\widetilde W^{(i)}(x) \overset{|x|\to +\infty}{\longrightarrow}\, + \infty$, the operator $\widetilde K^{(i)}$ is self-adjoint with compact resolvent.
+        Thus~$\sigma(\widetilde K^{(i)})$ consists of a sequence of isolated eigenvalues of finite multiplicity tending to $+\infty$.
+
+        The claim is implied by the inclusion $\sigma(K^{(i)}) \subset \sigma(\widetilde K^{(i)})$, which is equivalent to the reverse inclusion of resolvent sets.
+        Let $\lambda\in  \mathbb C \setminus \sigma(\widetilde K^{(i)})$, and $f\in L^{2}(S^{(i)})$. We define $\widetilde u \in H^2(\R)$ as the $\lambda$-resolvent of $\widetilde K^{(i)}$ applied to the odd reflection of $f$ along $\partial S^{(i)}$:
+        $$\widetilde f(x) = f{\mathbbm 1}_{x\leq \alpha} - \iota_\alpha f{\mathbbm 1}_{x>\alpha},\qquad (\lambda-\widetilde K^{(i)}) \widetilde u = \widetilde f,\qquad \|\widetilde u\|_{L^2(\R)}\leq C_\lambda \|\widetilde f\|_{L^2(\R)},$$
+        for some $C_\lambda>0$ independent of $f$.
+        It is simple to check, by symmetry of the potential, that the commutation relation $\iota_\alpha\widetilde K^{(i)} = \widetilde K^{(i)}\iota_\alpha$ holds.
+        Thus, applying~$\iota_\alpha$ on both sides of the resolvent equation, we get
+        $$(\lambda-\widetilde K^{(i)})\iota_\alpha\widetilde u = \iota_\alpha \widetilde f = -\widetilde f.$$
+        It follows that $\iota_\alpha \widetilde u = -\widetilde u$, which straightforwardly implies, since $\widetilde u \in H^2(\R)\xhookrightarrow{} C^{1,1/2}(\R)$, that $\widetilde u(\alpha)=0$.
+        Thus, $u = \widetilde u|_{S^{(i)}}$ belongs to $H_0^1\cap H^2(S^{(i)})$, and~$(\lambda-K^{(i)})u=f$.
+        Furthermore, we have 
+        $$\|u\|_{L^2(S^{(i)})} \leq \|\widetilde u\|_{L^2(\R^d)}\leq C_\lambda\|\widetilde f\|_{L^2(\R^d)} = 2 C_\lambda\|f\|_{L^2(S^{(i)})},$$
+        which shows, since $f$ was arbitrary, that $\lambda\in \mathbb C \setminus \sigma(K^{(i)})$, and concludes the proof for $d=1$.
+
+        For a general $d\geq 2$, we notice that we can construct a complete orthonormal basis set for $L^2(S^{(i)})$, consisting of eigenvectors for $K^{(i)}$, which is nothing more than the tensor basis generated from the orthonormal eigenbases of each of the one-dimensional harmonic oscillators:
+        \[K_j^{(i)} = -\partial_x^2 + \frac{\nu_j^{(i)2}}{4}x^2,\quad D(K_1^{(i)}) = H_0^1\cap H^2((-\infty,\alpha)),\quad D(K_j^{(i)}) = H^2(\R),\, j\geq 2.\]
+        The basis thus obtained is orthonormal in $L^2(S^{(i)})$, complete, and consists of eigenvectors for $K^{(i)}$ associated with real eigenvalues of finite multiplicity. It follows that $K^{(i)}$ is self-adjoint with compact resolvent.
+    \end{proof}
+
+    \paragraph{The supercritical case $S^{(i)} = \R^d$.\newline}
+    In this case, the spectrum is given by
+    \[\sigma(K^{(i)}) = \left\{ \frac12\sum_{j=1}^d |\nu_j^{(i)}|(2n_j+1)-\nu_j^{(i)},\quad n\in\N^d\right\}.\]
+    For $i=0$, $\nu_j^{(i)} = |\nu_j^{(i)}|$, hence
+    \[\sigma(K^{(0)}) = \left\{\sum_{j=1}^d \nu_j^{(i)}n_j,\quad n\in\N^d\right\}\ni 0.\]
+    For $i\geq 1$, $\nu_1^{(i)} = -|\nu_1^{(i)}|$ and $\nu_j^{(i)} = |\nu_j^{(i)}|,\, j \geq 2$, thus
+    \[\sigma(K^{(i)}) = \left\{|\nu_1^{(i)}|(n_1+1)+\sum_{j=2}^d \nu_j^{(i)}n_j,\quad n\in\N^d\right\},\quad i \geq 1.\]
+    The bottom of the latter spectrum is given by~$|\nu_1^{(i)}|$. For simplicity, we will enumerate the eigenvalues using the following convention. For a multi-index $n\in \N^d$,
+    $$\nu_n^{(i)} = \sum_{j=1}^d |\nu_{j}^{(i)}|n_j + \mathbbm 1_{\nu_1^{(i)}<0}|\nu_1^{(i)}|,$$
+    and $\psi^{(i)}_n$ the corresponding eigenfunction (which, up to a phase, we assume to be real-valued). Then, $\psi^{(i)}_n$ has the following product form
+    \begin{equation}
+        \label{eq:harmonic_eigenstates}
+        \psi^{(i)}_n(x) = \prod_{j=1}^d  \left(\frac{|\nu_j^{(i)}|}{2}\right)^{\frac14}\psi_{n_j}\left(\sqrt{\frac{|\nu^{(i)}_j|}2}x_j\right)
+    \end{equation}
+    into a product of elementary eigenfunctions, where for $k\in\N$, we denote
+    $$\psi_k(x) = \frac{1}{\sqrt{2^k k! \sqrt\pi}}\e^{-\frac{x^2}2}H_k(x),$$
+    with $H_k$ being the $k$-th Hermite polynomial. The function $\psi_k$ is an eigenstate for the canonical harmonic oscillator $\frac12\left(x^2-\partial^2\right)$.
+    
+    \paragraph{The subcritical case $S^{(i)} = (-\infty,0)\times \R^{d-1}$.\newline}
+    The difference in this case is that the oscillator corresponding to the unstable direction is restricted to the half-space $(-\infty,0)$. Its eigenstates correspond to the odd eigenstates of the harmonic oscillator on the full space. The spectrum is thus given, for $i\geq 1$, by
+    \[\sigma(K^{(i)}) = \left\{|\nu_1^{(i)}|(2n_1+2)+\sum_{j=2}^d \nu_j^{(i)}n_j,\quad n\in\N^d\right\}\]
+    In this case, the bottom of the spectrum is given by
+    $$2|\nu_1^{(i)}|.$$
+
+    The eigenfunctions have the same product form as \eqref{eq:harmonic_eigenstates}, but are restricted to the half-space, and only the odd modes contribute in the $x_1$ direction. The factor $\sqrt 2$ accounts for $L^2$ normalization.
+
+    \begin{equation}
+        \label{eq:harmonic_eigenstates_half_space}
+        \psi^{(i)}_n(x) = \mathbbm{1}_{S^{(i)}}(x)\sqrt 2\left(\frac{|\nu_1^{(i)}|}{2}\right)^{\frac14}\psi_{2n_1+1}\left(\sqrt{\frac{|\nu^{(i)}_1|}2}x_1\right)\prod_{j=2}^d  \left(\frac{|\nu_j^{(i)}|}{2}\right)^{\frac14}\psi_{n_j}\left(\sqrt{\frac{|\nu^{(i)}_j|}2}x_j\right)
+    \end{equation}
+
+    \paragraph{The critical case $S^{(i)} = (-\infty,\alpha_i) \times \R^{d-1}$.\newline}
+        In this case, the spectrum of the oscillator corresponding to the unstable direction, restricted to the half-space $(-\infty,\alpha_i)$, is not analytically known.
+
+        Nevertheless, we denote for $k\in\N$
+        $$(\lambda_k^{\alpha},\psi_k^{\alpha})$$
+        the $k$-th $L^2(S^{(i)})$-normalized eigenpair for the Dirichlet realization of the harmonic oscillator $\frac12\left(x^2-\partial^2\right)$ on $(-\infty,\alpha/\sqrt 2)$.
+        \todo[inline]{A double-check..}
+        The spectrum is then given, for $i\geq 1$, by
+        $$\sigma(K^{(i)}) = \left\{ |\nu_1^{(i)}|(\lambda_{n_1}^{\alpha} + \frac12) + \sum_{j=2}^d \nu_j^{(i)}n_j,\quad n\in\N^d\right\},$$
+        the lowest eigenvalue is
+        $$|\nu_1^{(i)}|\left(\lambda_{1}^{\alpha}+\frac12\right),$$
+        and the eigenstates are given by
+        $$\psi^{(i)}_n(x) = \mathbbm{1}_{S^{(i)}}(x)\left(\frac{|\nu_1^{(i)}|}{2}\right)^{\frac14}\psi_{n_j}^{\alpha}\left(\sqrt{\frac{|\nu^{(i)}_1|}2}x_1\right)\prod_{j=2}^d  \left(\frac{|\nu_j^{(i)}|}{2}\right)^{\frac14}\psi_{n_j}\left(\sqrt{\frac{|\nu^{(i)}_j|}2}x_j\right).$$
+    In each of the three cases, we denote by $\lambda_k^{(i)}$ the $k$-th eigenvalue of $K^{(i)}$ acting on $S^{(i)}$. In the case of an eigenvalue $\lambda$ which occurs multiple times (that is, such that multiple $d$-uplets $n\in\N^d$ correspond to $\lambda$), we convene that we count $\lambda$ with multiplicity, using the enumeration induced by the lexicographic order on $\N^d$. 
+
+    \paragraph{Global harmonic approximation.\newline}
+    We consider the following operator
+    \begin{equation}\label{eq:global_harmonic_approximation} K = \bigoplus_{i=0}^m K^{(i)},\quad \mathcal D(K) = H_0^1 \cap H^2 \left(\prod_{i=0}^m S^{(i)}\right),\end{equation}
+    with spectrum 
+    $$ \sigma(K) = \bigcup_{i=0}^m \sigma(K^{(i)}).$$
+    We denote by $(\lambda_k^{\mathrm{H}},\psi_k^{\mathrm{H}})$ the $k$-th smallest eigenpair of $K$. We count eigenvalues with multiplicity, defering first to the ordering on $1,\dotsm,m$, then to the ordering of eigenvalues of each $K^{(i)}$ to order multiple eigenvalues.
+
+    We also define the maps $k:\N^*\to \N^*$, $i:\N^*\to\{1,\dots,m\}$ such that
+    $$ \lambda_n^{\mathrm{H}} = \lambda_{k_n}^{(i_n)}.$$
+
+
+    \todo[inline]{En fait, on pourrait facilement étendre la définition à tous les points critiques, si on suppose qu'aucun ne franchit la frontière quand $\beta$ bouge (la preuve du théorème d'approximation harmonique ne devrait pas changer)}
+
+
+    \subsection{Definition of the harmonic quasimodes.}
+    We now give the definition of rough quasimodes for $H_\beta$, which are given by localizing exact modes for the $K_\beta^{(i)}$ in the neighborhood of each critical point, to ensure the Dirichlet boundary conditions are met and the harmonic approximation is valid.
+     More precisely, we fix $n\in\N^*$, and define
+
+    \begin{equation}
+        \label{eq:def_harm_quasimode}
+        \psitilde_{\beta,n}(x) = \frac{\beta^{\frac d4}}{Z_{\beta,n}}\left[\chi_\beta^{(i_n)}\psi_{k_n}^{(i_n)}\right](\sqrt\beta U^{(i_n)\intercal}(x-z_{i_n})),\quad \|\psitilde_{\beta,n}\|_{L^2(\Omega_\beta)}=1,
+    \end{equation}
+
+    where $\chi_\beta^{(i_n)}$ is a $\mathcal C^\infty_c$ cutoff function whose specific definition depends on $S^{(i_n)}$, and $Z_{\beta,n}$ is a normalization constant.
+    We recall the definition of the box neighborhoods~\eqref{eq:box_neighborhoods_extrema} and~\eqref{eq:box_neighborhoods_saddles}.
+    Let us fix once and for all a reference cutoff function
+    \begin{equation}
+        \chi\in\mathcal C^\infty_c (-1,1), \,\quad \chi \equiv 1\,\text{in }(-1/2,1/2),\quad 0\leq \chi\leq 1.
+    \end{equation}
+    Thus, $\mathrm{supp}\,\chi' \subset (-1,-1/2) \cap (1/2,1)$, and we may furthermore require that $\|\chi'\|_\infty \leq 3$.
+ 
+    Now, we set 
+    \begin{equation}
+        \label{eq:harm_cutoff}
+        \chi_\beta^{(i)}(y) = \eta_{\beta}^{(i)}(y_1)\prod_{k=2}^d \chi(\beta^{-r}y_d),
+    \end{equation}
+    for some small parameter $0<r<\frac12$ we fix later on.
+    \todo[inline]{au final il faudra le fixer}
+    We set $\eta_\beta^{(i)}(y_1) = \chi(\beta^{-r}y_1)$ if $y_1\leq 0$, and otherwise we define $\eta_\beta^{(i)}$ according to the nature of $S^{(i)}$.
+
+    \begin{itemize}
+        \item In the supercritical case $\sqrt\beta\deltai(\beta) \to \infty$, we choose $\eta_\beta^{(i)}(y_1) = \chi\left(\left[\sqrt{\beta}\deltai(\beta) \land \beta^{r}\right]^{-1}y_1\right)$ for $y_1>0$.
+        \item In the (sub)critical case $\sqrt\beta\deltai(\beta)\to \alpha \geq 0$, we set $\varepsilon^{(i)}(\beta) = |\alpha - \sqrt\beta\deltai(\beta)| \to 0$, and choose a smooth $\eta_\beta^{(i)}$ such that $\eta_\beta^{(i)} \equiv 1$ on $[0,\alpha-2(\varepsilon^{(i)}(\beta)\lor \beta^{-s})]$, $\eta_\beta^{(i)}\equiv 0$ on $[\alpha-(\varepsilon^{(i)}(\beta)\lor \beta^{-s}),+\infty)$, and $0\leq \eta_\beta^{(i)}\leq 1$, where $\frac12<s<1$ is a parameter we fix later on.
+        % \item In the critical case $\sqrt\beta\deltai(\beta) \to \alpha_i > 0$, we choose $\chi_\beta^{(i)}\equiv 1$ on  $(z_i-\beta^{\alpha-\frac12}/2,z_i+\varepsilon_\beta^{(i)})$, $\chi_\beta^{(i)}\equiv 0$ outside $(z_i-\beta^{\alpha-\frac12},z_i+\varepsilon_\beta^{(i)})$
+    \end{itemize}
+
+    In the following lemma, we 
+
+    \begin{lemma}[Localization estimate]
+        We have the following localization estimate. For any $n\in \N$, there exists $\beta_0,C>0$ such that, for all $\beta>\beta_0$, the following estimate holds:
+        \begin{equation}
+            \label{eq:localization_estimate}
+            \|(1-\chi_\beta^{(i)})
+        \end{equation}
+    \end{lemma}
+    We note that, by construction, each quasimode~\eqref{eq:def_harm_quasimode} is in $H_0^1\cap H^2(R_\beta^{(i)})$ for $\beta$ large enough
+    \todo[inline]{Ici, dans le cas critique il faut une hypothèse technique $ \sqrt\beta \deltai(\beta) \downarrow \alpha_i$ ?}
+    Let us also denote the complementary cutoff function 
+    \begin{equation}
+        \label{eq:chi_comp}
+        \chi_\beta^{(m+1)} = \sqrt{\mathbbm 1_{\Omega_\beta}-\sum_{i=0}^{m} \chi_\beta^{(i)2}}.
+    \end{equation}
+    % \section{The 1D case}
+    % As a first step we consider the case $d=1$:
+    % $$ \Omega_\beta = (a_\beta,b_\beta).$$
+    % Then $V$ has at most three critical points in $\Omega_0$, say $a_\beta \leq z_1 < z_0 < z_2 \leq b_\beta$ for all $\beta$, thus $\varepsilon_\beta^{(1)} = z_1 -a_\beta$ and $\varepsilon_\beta^{(2)} = b_\beta-z_2$.
+    % We use the notation $\kappa_i = V''(z_i)$.
+    
+
+    \subsection{Coarse estimates of the full spectrum through a harmonic approximation.}
+    We have the following result which identifies the first-order asymptotics of the spectrum of $-\cL_\beta$.
+
+    \begin{lemma}[Localization estimates]
+        \label{lemma:harm_quasimode_estimates}
+        There exists positive constants $c,\beta_0 >0$ such that, for all $\beta>\beta_0$ and any integers $n,m \in \{0,\dotsm,m\}$, the following estimates hold:
+        \begin{enumerate}[]
+            \item{\begin{equation}
+                \label{eq:l3_a}
+                \left|\langle \psitilde_{\beta,n},\psitilde_{\beta,m}\rangle -\delta_{nm}\right| \leq \e^{-c\beta^{1+2r}},
+            \end{equation}}
+            \item{
+                \begin{equation}
+                    \label{eq:l3_b}
+                \end{equation}
+            }
+            \item{
+                \begin{equation}
+                    \label{eq:l3_c}
+                \end{equation}
+            }
+            \item{
+                \begin{equation}
+                    \label{eq:l3_d}
+                \end{equation}
+            }
+        \end{enumerate}
+
+
+        % \begin{equation}
+        %     \label{eq:l3_b}
+        % \end{equation}
+
+        % \begin{equation}
+        %     \label{eq:l3_c}
+        % \end{equation}
+
+    \end{lemma}
+    \begin{proof}
+        We start by proving~\eqref{eq:l3_a}. If $i_n\neq i_m$, the statement is void since the quasimodes have disjoint support for $\beta$ large enough. Thus we convene that we fix $ i:= i_n = i_m = i$, and thus it suffices to estimate
+        $$\langle \chi_\beta^{(i)}\psi_{n}^{(i)}(\sqrt\beta(\cdot-z_i)),\chi_\beta^{(i)}\psi_{m}^{(i)}(\sqrt\beta(\cdot-z_i))\rangle.$$
+        Changing variables with $y=\sqrt\beta(x-z_i)$, this equals
+        $$ \beta^{-\frac14}\langle \eta^{(i)}\psi_n^{(i)},\eta^{(i)}\psi_m^{(i)}\rangle,$$
+        where $\eta^{(i)}(y) = \chi_\beta^{(i)}(x)$. 
+        
+        Observe, examining the definition of the cutoff functions, that $\eta^{(i)} \equiv 1$ on $B_{S^{(i)}}(0,\beta^{\alpha+\frac12}/2)$, and $\eta^{(i)}\equiv 0$ outside $B_{S^{(i)}}(0,\beta^{\alpha+\frac12})$, where we recall the definition of the model space $S^{(i)}$~\ref{def:model_spaces}.
+        Then, in $L^2(S^{(i)})$, we write
+        $$
+        \langle \eta^{(i)}\psi_n^{(i)},\eta^{(i)}\psi_m^{(i)}\rangle = \langle \psi_n^{(i)},\psi_m^{(i)}\rangle + \langle (1-\eta^{(i)})\psi_n^{(i)},(1-\eta^{(i)})\psi_m^{(i)}\rangle + 2\langle (1-\eta^{(i)})\psi_n^{(i)},\psi_m^{(i)}\rangle.
+        $$
+        The first term is $\delta_{nm}$, by definition of the harmonic eigenmodes on $S^{(i)}$.
+
+        We then proceed to bound:
+
+        \[\left| \langle (1-\eta^{(i)})\psi_n^{(i)},(1-\eta^{(i)})\psi_m^{(i)}\rangle + 2\langle (1-\eta^{(i)})\psi_n^{(i)},\psi_m^{(i)}\rangle\right| \leq \int_{S^{(i)}} \left((1-\eta^{(i)})^2 + 2(1-\eta^{(i)})\right)\left|\psi_n^{(i)}\psi_m^{(i)}\right|\]
+        \[\leq 3\underset{S^{(i)}\setminus B(0,\beta^{\alpha+\frac12}/2)}{\int}|\psi_m^{(i)}\psi_n^{(i)}|.\]
+
+        Since~\eqref{eq:harmonic_eigenstates} expresses $\psi_m^{(i)}$ as the product of a polynomial with a Gaussian function, a tail bound allows us to deduce the claim~\eqref{eq:l3_a}, upon absorbing the polynomial terms inside the exponential.
+        \todo[inline]{Ajouter cas $S^{(i)} = (-\infty,\alpha_i)$ avec Agmon + réecrire en dimension $d$.}
+
+    \end{proof}
+
+    \begin{lemma}
+        Fix, $\beta>0$, $0\leq i \leq 2$ and $u\in L^2(\Omega_\beta)$.
+        There exists $C>0$ and $\beta_0>0$ such that, for all $\beta>\beta_0$, the following estimate holds:
+        \begin{equation}
+            \label{eq:taylor_bound_witten}
+            \|(H_\beta-H_\beta^{(i)})\chi_\beta^{(i)} u\| \leq C\beta^{3\alpha+\frac12}\|\chi_\beta^{(i)}u\| = \mathrm{o(\beta)}\|\chi_\beta^{(i)}u\|.
+        \end{equation}
+    \end{lemma}
+    \begin{proof}
+        Since $H_\beta-H_\beta^{(i)}$ is a multiplication operator, it is enough to uniformly bound
+        $$U_\beta - \beta^2(x-z_i)^\intercal \Sigma^{(i)}(x-z_i) - \beta \frac{\Delta V(z_i)}2$$ on $\mathrm{supp}\,\chi_\beta^{(i)}$.
+        In turn, this is given by the sum of two contributions:
+        $$ \beta^2\left(\frac{|\nabla V|^2}4 - (x-z_i)^\intercal \Sigma^{(i)}(x-z_i) \right) - \frac\beta2(\Delta V - \Delta V(z_i)).$$
+        Recall that, in each case, $\mathrm{supp}\,\chi_\beta^{(i)}$ is a closed interval containing $z_i$, contained in $B(z_i,\beta^{\alpha-\frac12})$ for $\beta$ large enough. 
+        Thus, there exists $\beta_0>0, C>0$ depending only on $V$ and $i$ such that for all $\beta>\beta_0$ and every $x\in \mathrm{supp}\,\chi_\beta^{(i)}$, 
+        $$\left|\frac{|\nabla V|^2}4 - (x-z_i)^\intercal \Sigma^{(i)}(x-z_i)\right| < C_1 \beta^{3\alpha-\frac32},$$
+        where we use a second-order Taylor bound. Similarly, we treat the Laplacian term by a first-order Taylor bound, yielding,
+        $$ \left| \Delta V - \Delta V(z_i)\right| \leq C_2 \beta^{\alpha-\frac12}.$$
+
+        In turn, we get that 
+        $$\|(H_\beta-H_\beta^{(i)})\chi_\beta^{(i)} u\| \leq C\max\{\beta^{3\alpha+\frac12},\beta^{\alpha+\frac12}\}\|\chi_\beta^{(i)}u\|,$$
+        which yields the desired bound, and which is small with respect to $\beta$ since $0<\alpha<\frac16$.
+
+    \end{proof}
+
+
+    \begin{proof}[Proof of Theorem~\ref{thm:harm_approx_1d}]
+        % \linebreak
+
+        {\underline{{\bf Step 1: }Upper bound.}\newline}
+        Fix $n\geq 1$. We consider the family $(\psitilde_{\beta,j})_{j=1,\dots,n}$.
+        The quasi-orthogonality estimate~\eqref{eq:l3_a} implies the Gram matrix $\left(\langle \psitilde_{\beta,j},\psitilde_{\beta,k}\rangle\right)_{1\leq j,k \leq n}$ is non-singular, hence the $\psitilde_{\beta,j}$ span a $n$-dimensional subspace of $H_0^1(\Omega_\beta)\cap H^2(\Omega_\beta)$.
+        It suffices to show that, for all $u\in \mathrm{Span}(\psitilde_{\beta,j},\,1\leq j \leq n)$,
+        $$Q_\beta(u) \leq (\beta\lambda_n^{\mathrm{H}}+\o(\beta))\|u\|^2,$$
+        % Indeed, we will have shown that
+        % $$\max_{\underset{\dim E = n}{ E \subset H_0^1\cap H^2(\Omega_\beta)}}\,\underset{u\in E}{\min}\, \frac{Q_\beta(u)}{\|u\|^2}\leq (\beta\lambda_n^{\mathrm{H}}+\o(\beta)):$$
+        which implies
+        \[\underset{\beta\to\infty}{\overline\lim}\,\beta^{-1}\lambda_{\beta,n} \leq \lambda_n^{\mathrm{H}}\]
+        by the Max-Min Courant--Fischer principle.
+
+        We start with $u=\chi_\beta^{(i_j)}\psi_{k_j}^{(i_j)}(\sqrt \beta U^{(i_j)\intercal}(\cdot-z_{i_j}))$. For simplicity, we write, recalling the definition of the harmonic quasimodes~\eqref{eq:def_harm_quasimode}, $u = \chi^{(i)}\psi$, where $\chi^{(i)}=\chi_\beta^{(i_j)}$ is the cutoff function supported around $z_i = z_{i_j}$, and $\psi$ is an $L^2$-normalized eigenfunction of the harmonic oscillator $H_\beta^{(i)}$ around $z_i$.
+        We then have:
+        $$Q_\beta(u) = \langle H_\beta\chi^{(i)}\psi,\chi^{(i)}\psi\rangle = \langle H_\beta^{(i)}\chi^{(i)}\psi,\chi^{(i)}\psi\rangle + \langle (H_\beta-H_\beta^{(i)})\chi^{(i)}\psi,\chi^{(i)}\psi\rangle.$$
+        By a Cauchy--Schwarz inequality and the bound~\eqref{eq:taylor_bound_witten}, we estimate the rightmost term by
+        $$\left|\langle (H_\beta-H_\beta^{(i_j)})\chi^{(i)}\psi,\chi^{(i)}\psi\rangle\right| \leq C\e^{3r+\frac12}\|\chi^{(i)}\psi\|^2 = \o(\beta)\|u\|^2 =\o(\beta).$$
+        .
+        We treat the other term using the IMS formula~\eqref{eq:ims_formula_quad}, which gives
+        $$ \langle H_\beta^{(i)}\chi^{(i)}\psi,\chi^{(i)}\psi\rangle =  \langle H_\beta^{(i)}\psi,\psi\rangle - \sum_{\underset{j\neq i}{i=0}}^{m+1}\left[\langle H_\beta^{(i)}\chi_\beta^{(j)}\psi,\chi_\beta^{(j)}\psi\rangle - \left\| |\nabla\chi_\beta^{(j)}|\psi\right\|^2\right] + \left\| |\nabla\chi^{(i)}|\psi\right\|^2,$$
+        where we recall the definition of $\chi_\beta^{(m+1)}$~\eqref{eq:chi_comp}.
+
+        We have $\langle H_\beta^{(i)}\psi,\psi\rangle = \beta\lambda_{k}^{(i)}\|\psi\|^2 \leq \beta\lambda_{n}^{\mathrm{H}}\|\psi\|^2$, by definition of the harmonic modes.
+        Since $\|\psi\|^2 = \|u\|^2 + 2\langle \chi^{(i)}\psi,(1-\chi^{(i)})\psi\rangle + \|(1-\chi^{(i)})\psi\|^2$, we are left to show that
+        \begin{equation}
+            \label{eq:harm_proof_ub_remainder}
+            2\beta\langle \chi^{(i)}\psi,(1-\chi^{(i)})\psi\rangle + \beta\|(1-\chi^{(i)})\psi\|^2- \sum_{\underset{j\neq i}{i=0}}^{m+1}\left[\langle H_\beta^{(i)}\chi_\beta^{(j)}\psi,\chi_\beta^{(j)}\psi\rangle - \left\| |\nabla\chi_\beta^{(j)}|\psi\right\|^2\right] + \left\| |\nabla\chi^{(i)}|\psi\right\|^2 = \o(\beta)\|u\|^2.
+        \end{equation}
+        In fact, since $\|u\|^2 = \|\chi^{(i)}\psi\|^2\leq \|\psi\|^2=1$, it is enough to show that each of the terms comprising the sum are $\o(\beta)$.
+        
+        By a Cauchy-Schwartz inequality, we write 
+        \[|\langle \chi^{(i)}\psi,(1-\chi^{(i)})\psi\rangle| \leq \|\chi^{(i)} \psi\| \|(1-\chi^{(i)})\psi\|\leq \|(1-\chi^{(i)})\psi\|,\]
+        which shows that the two leftmost terms in~\eqref{eq:harm_proof_ub_remainder} are small, owing to
+        \todo[inline]{estimation 1}
+
+        We treat the terms
+        \[\langle H_\beta^{(i)}\chi_\beta^{(j)}\psi,\chi_\beta^{(j)}\psi\rangle,\quad j\neq i\]
+        using
+        \todo[inline]{Decay of eigenmodes in $H^2$ away from $z_i$}
+
+        To treat the terms of the form $\||\nabla \chi^{(j)}| \psi\|^2$, we separate depending on the nature of $z_i$
+
+        \paragraph{Case $z_i$ is a supercritical saddle point or $z_i$ is not a saddle point}
+            In this case, 
+
+        \paragraph{Case $z_i$ (sub)critical saddle point}
+
+        
+        We note that for $j\neq i$,~$\chi^{(j)}\psi$ is supported away from $z_i$, and thus we may bound $\langle H_\beta^{(i)}\chi_\beta^{(j)}\psi,\chi_\beta^{(j)}\psi\rangle$ by an exponentially small quantity in $\beta$.
+        Similarly, a uniform bound $|\nabla_\chi\beta^{(j)}|\leq C\beta^{}$ yields an exponential bound on $\|\chi_\beta^{(j)}\psi\|^2$.
+
+        Furthermore, each term inside the sum is small with respect to $\beta$, owing to the exponential decay of $\psi$ away from $z_i$. \todo[inline]{revenir mettre les estimées dans le bon lemme et préciser}.
+        Due to the exponential decay of $\psi$ away from $z_i$, one can show that the other terms are exponentially small.
+        \todo[inline]{Compléter le lemme \ref{lemma:harm_quasimode_estimates} avec les estimations et préciser.}
+        For general $u$, the bound follows from the quasi-orthogonality estimate \eqref{eq:l3_a}
+        \todo[inline]{idem}
+
+        Thus,
+        $$\underset{\beta\to\infty}{\overline\lim}\,\beta^{-1}\lambda_{n,\beta} \leq \lambda_n^{H}.$$
+        {\underline{{\bf Step 2: }Lower bound.}\newline}
+        This time, we use the Min-Max version of the Courant--Fischer principle. Namely, it suffices to show that, for any $u \in \mathrm{Span}(\psitilde_{\beta,j}, 1\leq j \leq n-1)^\perp$, 
+        $$ Q_\beta(u) \geq (\beta\lambda_n^{\mathrm{H}} + \o(\beta))\|u\|^2.$$
+
+        Since the $\psitilde_{\beta,j}$ are linearly independent as $\beta\to\infty$, we will have shown
+        $$ \underset{\underset{\dim E = n-1}{E\subset H_0^1\cap H^2(\Omega_\beta)}}{\min}\,\underset{u\in E^\intercal}{\max}\,\frac{Q_\beta(u)}{\|u\|^2} \geq \beta\lambda_n^{\mathrm{H}} + \o(\beta),$$
+        which entails
+        \[\underset{\beta\to\infty}{\underline\lim}\,\beta^{-1}\lambda_{n,\beta} \geq \lambda_n^{\mathrm{H}}.\]
+
+        Hence, let $u$ be orthogonal to $\psitilde_{\beta,j}$ for every $1\leq j \leq n-1$. We decompose $Q_\beta(u)$ using the IMS formula:
+        \[Q_\beta(u) = \sum_{i=0}^{m+1} Q_\beta(\chi_\beta^{(i)}u) - \||\nabla \chi_\beta^{(i)}|u\|^2.\]
+
+        For the terms $0\leq i \leq m$, we have
+
+        \begin{equation}
+            Q_\beta(\chi_\beta^{(i)}u)-\langle H_\beta^{(i)}\chi_\beta^{(i)}u,\chi_\beta^{(i)}\rangle = \langle (H_\beta-H_\beta^{(i)})\chi_\beta^{(i)}uj,\chi_\beta^{(i)}u\rangle = o(\beta)\|u\|^2,
+        \end{equation}
+        using the Taylor bound~\eqref{eq:taylor_bound_witten}. On the other hand, the assumption that $u$ is orthogonal to the $\widetilde \psi_{\beta,k}$ for $1\leq k \leq n-1$ implies that $\chi_\beta^{(i_k)}u$ is orthogonal to the $\psi_{\beta,k_k}^{(i_k)}$, so that the
+        Courant-Fischer principle applied to $H_\beta^{(i)}$ implies
+        % Note that we are free to assume that, for some $C>0$,
+        % $$ \|\nabla \chi_\beta^{(i)}\|_\infty \leq  C\beta^{\frac12-\alpha}.$$
+
+        % Thus,
+        % $$Q_\beta(u) \geq \sum_{i=0}^{m+1} Q_\beta(\chi_\beta^{(i)}u) + C\beta^{1-2\alpha}\|u\|^2 = \sum_{i=0}^{m+1} Q_\beta(\chi_\beta^{(i)}u) + \o(\beta)\|u\|^2.$$
+
+        % We estimate $Q_\beta(\chi_\beta^{(m+1)}u)$. 
+        % Note that $\mathrm{supp}\,\chi_\beta^{(m+1)}\subset \bigcup_{i=0}^m B_{\Omega_\beta}(z_i,\beta^{\alpha-\frac12}/2)$, so that
+        % $$ $$
+        % \todo[inline]{
+        %     Minorer ce terme en utilisant la croissance quadratique de $U_\beta$ en dehors de voisinages des $z_i$s (sinon il y a plus de points critiques!)
+        %     (il faut aussi controller la contribution du Laplacien, qui est négligeable)
+        % }
+
+        % For $0\leq i\leq m$, we write
+        % \[Q_\beta(\chi_\beta^{(i)}u) = \left\langle H_\beta^{(i)}\chi_\beta^{(i)}u,\chi_\beta^{(i)}u\right\rangle + \left\langle (H_\beta-H_\beta^{(i)})\chi_\beta^{(i)}u,\chi_\beta^{(i)}u\right\rangle=\left\langle H_\beta^{(i)}\chi_\beta^{(i)}u,\chi_\beta^{(i)}u\right\rangle + o(\beta)\|u\|^2,\]
+        % using again the bound~\eqref{eq:taylor_bound_witten}.
+        % Now, since $u$ is orthogonal to $\psi_{\beta,j}$ for $1\leq j \leq n-1$, we have, if $i \in \{i_1,\leq,i_j\}$, that $\chi_\beta^{(i)}u$ is orthogonal to $\psi_{\beta,k_n}^{(i)}$
+    \end{proof}
+
+    % In the following we collect some basic facts of linear algebra.
+    % \begin{lemma}\label{lemma:linalg}
+    %     Fix $\psi_1,\dots,\psi_n\in\mathcal H$ where $\mathcal H$ is a Hilbert space.
+    %     \begin{enumerate}
+    %         \item If, for all $i=1,\dots,n$, $$\sum_{j\neq i} \left|\langle\psi_i,\psi_j\rangle\right| < |\langle\psi_i,\psi_i\rangle|,$$ then $\mathrm{dim}\,\mathrm{Span}\{\psi_1,\dots,\psi_n\} = n$.
+    %         \item 
+    %     \end{enumerate}
+    % \end{lemma}
+
+    \section{Finer asymptotics for the first eigenvalue.}
+        In this section, we analyze the finer behavior of $\lambda_{\beta,1}$. 
+
+        \paragraph{Strategy}
+        \begin{itemize}
+            \item{Using a simple Gaussian quasi-mode supported in a neighborhood of the unique minimum $z_0$, it is easy to see that 
+            $\lambda_{\beta,1} < \e^{-\beta c}$ for some $c>0$ and $\beta$ large enough.
+            Thus,
+            $\mathrm{Ran}\,\pi_{[0,c/\beta)}=1$ for $\beta$ small enough. By similar arguments, one shows that $\mathrm{Ran}\,\pi^{(1)}_{[0,c/\beta)}= m$ (now this is the spectral projector for the Witten Laplacian on 1-forms)} 
+            \item{
+                Next, one constructs a quasi-mode for $u_{1,\beta}$, the first eigenvector of $\cL_\beta$. It is defined in the vicinity $R_\beta^(i)$ of the saddle point,
+                where $y = \sqrt{\beta}{U^{(i)^\intercal}}(x-z_i)$, by
+                $$\widetilde{u}(y) = \frac{\int_{-\delta}^{y_1}\chi(t)\e^{-\beta|\nu_1^{(i)}|t^2/2}\,\d t}{\int_{-\delta}^{\deltai(\beta) }\chi(t)\e^{-\beta|\nu_1^{(i)}|t^2/2}\,\d t},$$
+                where $\chi$ is an appropriate cutoff function, and defined to be $1$ inside the well, and properly extended at the boundary.
+
+                This is the construction of~\cite{LPN21}, which only requires a slight adaptation here for the critical case.
+                Since these only depend on $y_1$, they respect the tangential Dirichlet boundary conditions and so can serve as a quasimode on 1-forms.
+            }
+            \item{
+                Passing to the Witten representation, we get a first (upper) estimate for the first eigenvalue using a Laplace method.
+            }
+            \item{Using the form $H_\beta = d^*d$, one can estimate the singular value of the linear map $d : \mathrm{Ran}\,\pi_{[0,c/\beta)}\to \mathrm{Ran}\,\pi^{1}_{[0,c/\beta)}$}, which is the square of the smallest eigenvalue. 
+        \end{itemize}
+
+        \subsection{Construction of the quasimode.}
+
+        \subsection{Estimate using Laplace method}
+
+        \subsection{Estimation of the singular values}
+
+    \section{Technical tools}
+    In this section we collect various definitions and lemmata.
+
+    \paragraph{Witten Laplacian.\newline}
+    Instead of studying the spectral asymptotics of the generator $-\cL_\beta$, it is useful to perform the following change a variables.
+    \begin{definition}
+        The Witten Laplacian is the differential operator
+        \label{def:witten_laplacian}
+        \begin{equation}\label{eq:witten_laplacian}
+            H_{\beta} = U_\beta - \Delta,\qquad U_\beta = \frac{\beta^2}4|\nabla V|^2 - \frac{\beta}2 \Delta V,
+        \end{equation}
+        with domain $D(H_\beta)=H_0^1\cap H^2(\Omega) \subset L^2(\Omega)$.
+    \end{definition}
+    The interest of considering this operator is that one can relate the spectral properties of $\cL_\beta$ to those of $H_\beta$, which acts on a flat $L^2$ space.
+    Consider the unitary transformation $ U:L^2(\Omega) \to L^2_\mu(\Omega)$, $u \to \e^{\beta V/2}u$, with $U^* : L^2_\mu(\Omega) \to L^2(\Omega)$, $U^* v = \e^{-\beta V/2}v $.
+    The conjugate of $\cL_\beta$ is then an operator on $L^2(\Omega)$ which ressembles a Schr\"odinger operator:
+
+    \[ \begin{aligned}U^* (-\cL_\beta) U &= \e^{-\beta V/2}\left(\nabla V \cdot \nabla - \frac1\beta \Delta\right)\e^{\beta V/2}\\
+         &= \e^{-\beta V/2}\left( \nabla V \cdot \,-\frac1\beta \mathrm{div}\right) \nabla \e^{\beta V/2}\\
+        &= \e^{-\beta V/2}\left(\nabla V\cdot \,-\frac1\beta \mathrm{div}\right)\left[\e^{\beta V/2}\nabla + \frac\beta2\nabla V\e^{\beta V/2}\right]\\
+        &=\nabla V\cdot \left[\nabla + \frac\beta2\nabla V\right] -\frac12\nabla V\cdot \nabla -\frac1\beta\Delta - \frac\beta4|\nabla V|^2 - \frac12 \nabla V\cdot \nabla -\frac12\Delta V \\
+    &= \frac12(\frac\beta2|\nabla V|^2 -\Delta V) -\frac1\beta \Delta \\
+    &=\frac1\beta H_{\beta}.\end{aligned}\]
+    Therefore, the spectrum of~$-\cL_\beta$ is related to that of~$H_\beta$ via
+    \[ \sigma\left(H_\beta\right) = \beta \sigma\left(-\cL_\beta\right).\]
+
+    We denote by
+    \begin{equation}
+        \label{eq:witten_quad_form}
+        Q_\beta(u) = \langle U_\beta u ,u \rangle + \|\nabla u\|^2
+    \end{equation}
+    the quadratic form associated to the Witten Laplacian, with domain $H_0^1(\Omega_\beta)$.
+
+    \paragraph{Various lemmas.\newline}
+    The following lemma expresses the monotonicity of eigenvalues with respect to the domain of the operator.
+    \begin{lemma}
+        \label{lemma:cf_monotonicity}
+        Let $\mathcal H_1 \subset \mathcal H_2$ be separable Hilbert spaces such that the positive unbounded operator $A$ with domain $D_1$ (respectively $D_2$) is self-adjoint in $\mathcal H_1$ (respectively $\mathcal H_2$), with $D_1\subset D_2$.
+        Denote $0 \leq \lambda_1(D_i) \leq \lambda_2(D_i)\leq \dots$ the sequence of ordered eigenvalues (counted with multiplicity) below the essential spectrum for the realization of $A$ on $D_i$.
+
+        Then, $\lambda_k(D_1) \geq \lambda_k(D_2)$ whenever these two eigenvalues exist.
+
+        \begin{proof}
+        By the Courant--Fischer Min-Max principle (we write, for $u,v \in \mathcal H_1$, $\langle u,v\rangle_{\mathcal H_1} = \langle u,v\rangle_{\mathcal H_2}$):
+        $$\lambda_k(D_i) = \underset{\underset{\mathrm{dim} V = k}{V\subset D_i}}{\inf}\,\underset{u\in V\setminus\{0\}}{\sup} \frac{\left\langle Au,u\right\rangle_{\mathcal H_2}}{\|u\|^2_{\mathcal H_2}}.$$
+        The claimed result follows immediately since
+        $$\left\{ V\subset D_1\,\middle|\,\mathrm{dim}\,V = k\right\} \subset \left\{ V\subset D_2\,\middle|\,\mathrm{dim}\,V = k\right\},$$
+        so that the $\inf$ is taken over a smaller set in the expression for $\lambda_k(D_1)$.
+        \end{proof}
+    \end{lemma}
+    \begin{corollary}
+        The map $\beta \mapsto \lambda_{k,\beta}$ is non-decreasing for all $k$, since~$\beta\mapsto~H_0^1\cap~H^2(\Omega_\beta;\mu)$ is non-increasing.
+    \end{corollary}
+
+    A key technical tool is the following formula, which allows to decompose Schr\"odinger operators as sums of localized terms, at the cost of an error term involving gradients of cutoff functions.
+    \begin{lemma}\label{lemma:ims_formula}
+        Let $\Omega \subset \R^d$ be an open set, and $(\chi_i)_{i=1,\dots,m}$ be a partition of unity on~$\Omega$, in the sense that
+        \[\sum_{i=1}^m \chi_i^2 = \mathbbm{1}_{\Omega},\quad \chi_i\in C^2(\Omega)\quad\forall\,1\leq i\leq m.\]
+        Let also $H = U-\Delta$ be the Schr\"odinger Hamiltonian operator acting on $H_0^1\cap H^2(\Omega) \subset L^2(\Omega)$.
+        Then the following identity holds:
+        \begin{equation}
+            \label{eq:ims_formula}
+            H = \sum_{i=1}^m \chi_i H \chi_i - \sum_{i=1}^m |\nabla \chi_i|^2.
+        \end{equation}
+        Writing $Q(u) = \langle Hu,u\rangle = \langle U u,u\rangle + \|\nabla u\|^2$, we also have the following identity for any $u\in H_0^1(\Omega)$:
+        \begin{equation}
+            \label{eq:ims_formula_quad}
+            Q(u) = \sum_{i=1}^m Q(\chi_i u) - \| |\nabla \chi_i| u\|^2.
+        \end{equation}
+        
+        \begin{proof}
+            We compute the following commutator in two ways:
+            \[ \begin{aligned}
+                \left[ \chi_i, [\chi_i,H]\right] &= \chi_i^2 H - 2\chi_i H \chi_i + H \chi_i^2,\\
+                \left[ \chi_i, [\chi_i,H]\right]&= -\left[\chi_i , [\chi_i,\Delta]\right]\\
+                &= -\left[\chi_i,\chi_i\Delta-\Delta \chi_i\right]\\
+                &= -\left[\chi_i,-2\nabla\chi_i\cdot\nabla - (\Delta \chi_i)\right]\\
+                &= 2\left[\chi_i,\nabla\chi_i\cdot\nabla\right]\\
+                &= 2\left(\chi_i\nabla\chi_i\cdot \nabla -\chi_i\nabla\chi_i\cdot \nabla - |\nabla\chi_i|^2\right)\\
+                &=-2|\nabla \chi_i|^2.
+            \end{aligned} \]
+            Summing in the first equality over~$i$, we obtain
+            \[\sum_{i=1}^m \left(\chi_i^2 H + H\chi_i^2 -2 \chi_i H \chi_i\right) = -2 \sum_{i=1}^m |\nabla \chi_i|^2,\]
+            which gives the required conclusion upon using~$\sum_i \chi_i^2 = \mathbbm{1}_\Omega$ and rearranging terms.
+
+            The quadratic form of the IMS formula follows by density since for any $\varphi \in \mathcal C^\infty_c(\Omega)$,
+            $$
+            Q(\varphi) = \langle H\varphi,\varphi\rangle = \sum_{i=1}^m \langle \chi H \chi \varphi,\varphi\rangle - \langle |\nabla\chi_i|^2\varphi,\varphi\rangle = \sum_{i=1}^m \langle H\chi_i\varphi,\chi_i\varphi\rangle - \langle |\nabla \chi_i|\varphi,|\nabla\chi_i|\varphi\rangle,
+            $$
+            which is the claimed identity for $\varphi$.
+        \end{proof}
+
+    \end{lemma}
+
+    In the following $(\mathcal H,\langle\cdot\rangle)$ is a general Hilbert space, $\|\cdot\|$ the associated norm, and $P$ is a self-adjoint unbounded operator on $\mathcal H$ with domain $\mathcal D(P)$. We denote by $\pi$ the projection-valued measure given by the spectral theorem, and denote $\pi_\lambda = \pi_{\{\lambda\}}$ for $\lambda\in\R$.
+    We also denote the quadratic form defined for $u\in\mathcal D(P)$ by $Q(u) = \langle Pu,u\rangle$,with domain $\mathcal D(Q)$.
+    \begin{lemma}[Abstract estimates for quasimodes]
+        Let $z \in \mathbb C \setminus \sigma(P)$, and $u \in \mathcal H$ such that $\|u\|=1$. The role of $u$ is that of an approximate eigenvector for $P$, or quasimode.
+        \begin{enumerate}[i)]
+            \item {We have the identity \begin{equation}
+                \label{eq:distance_to_spectrum}
+                \|(z-P)^{-1}\|_{\mathcal B(\mathcal H)} =  \mathrm{d}(z,\sigma(P))^{-1}
+            \end{equation}}
+            \item {Let $u\in\mathcal D(P)$, $\|u\|=1$, and $\mu\in \mathbb C$. Then \begin{equation}
+                \label{eq:resolvent_estimate_lambda}
+                \|(P-\mu)u\| \leq \varepsilon \implies \exists \lambda\in\sigma(P),\,|\mu-\lambda|\leq \varepsilon.
+            \end{equation}}
+            \item {Assume furthermore that $\lambda$ is an isolated eigenvalue of $P$: $\sigma(P) \cap B(\lambda,\delta) = \{\lambda\}$ for some $\delta >2\varepsilon$. Then,
+            \begin{equation}
+                \label{eq:resolvent_estimate_u}
+                \|u-\pi_\lambda u\| \leq \frac{2\varepsilon}{\delta},
+            \end{equation}
+            where in this case $\pi_\lambda$ is the orthogonal projector onto the eigenspace $\ker(P-\lambda)$ associated with the eigenvalue $\lambda$.
+            }
+            \item{
+                Assume furthermore that $P$ is non-negative, that is $Q(u)\geq 0$ for all $u\in\mathcal D(Q)$  then, for $u\in\mathcal D(P)$ with $\|u\|=1$ and $b>0$, we have
+                \begin{equation}
+                    \label{eq:spectral_markov_inequality}
+                    \|\pi_{[b,+\infty)}u\|^2 \leq \frac{Q(u)}{b}.
+                \end{equation}
+            }
+        \end{enumerate}
+    \end{lemma}
+    \begin{proof}
+        \begin{enumerate}[i)]
+            \item {This is a simple corollary of the spectral theorem, see}
+            \item {Assume without loss of generality $\mu\not\in\sigma(P)$, otherwise the statement is void. Then $1 = \|u\| \leq \|(P-\mu)^{-1}\|_{\mathcal B(\mathcal H)} \|(P-\mu)u\|$, whence $\mathrm{d}(\mu,\sigma(P))\leq \| (P-\mu)u\|$ by i).}
+            \item {We consider the operator $P_\lambda = P - \lambda\pi_\lambda$. Acting on $\mathcal H_\lambda=\ker (P-\lambda)^{\perp}$ with domain $\mathcal D(P)\cap \mathcal H_\lambda$, $P_\lambda$ is a self-adjoint operator with spectrum $\sigma(P_\lambda) = \sigma(P)\setminus \{\lambda\}$, and therefore $d(\lambda,\sigma(P_\lambda)) > \delta$, which implies $\|(P_\lambda-\lambda)^{-1}\|_{\mathcal B(\mathcal H_\lambda)} \leq \frac1\delta$ by i).
+            Noticing that $\|u\| = \|u\|_{\mathcal H_\lambda}$ for all $u\in \mathcal H_\lambda$, and $\pi_\lambda u - u\in \mathcal H_\lambda$, we compute:
+            \begin{align*}
+               \|\pi_\lambda u -u\| &= \|\pi_\lambda u -u\|_{\mathcal H_\lambda}\\
+                &\leq \|(P_\lambda - \lambda)^{-1}\|_{\mathcal B(\mathcal H_\lambda)}\|(P_\lambda - \lambda)(\pi_\lambda u -u)\|\\
+                &\leq \frac1\delta\|(P_\lambda - \lambda)(\pi_\lambda u -u) \|\\
+                &=\frac1\delta\|(P-\lambda\pi_\lambda-\lambda)(\pi_\lambda u -u)\|\\
+                &=\frac1\delta\|P\pi_\lambda u -Pu -\lambda\pi_\lambda^2 u + \lambda\pi_\lambda u -\lambda \pi_\lambda u +\lambda u\|\\
+                 &= \frac1\delta \| P\pi_\lambda u - Pu - \lambda\pi_\lambda u + \lambda u + \mu u  - \mu u\|\\
+                 &\leq \frac1\delta\left(\|(P-\lambda)\pi_\lambda u\| + \|\mu u - Pu\| + |\lambda - \mu|\|u\|\right)\\
+                 &\leq \frac{2\varepsilon}\delta\|u\| = \frac{2\varepsilon}{\delta}.
+            \end{align*}
+            In the last line, we use that $(P-\lambda)\pi_\lambda = 0$ by definition of $\pi_\lambda$, and that $\|(\lambda -\mu)u\| = |\lambda-\mu|\|u\|\leq \varepsilon$ by ii).
+            }
+            \item{
+                The spectral theorem yields a probability measure $\mu_u : A \mapsto \langle \pi_A u,u\rangle$ on $\R_+$. Let $U\sim \mu_u$.
+                Applying Markov's inequality, we get:
+                \begin{equation}
+                    \|\pi_{[b,+\infty)}u\|^2 = \mathbb P (U \geq b) \leq \frac{\mathbb E[U]}{b} = \frac1b\int_0^\infty \langle \lambda\,\d\pi_{\lambda}u,u\rangle = \frac1b\langle Pu,u\rangle = \frac{Q(u)}b.
+                \end{equation}
+            }
+        \end{enumerate}        
+    \end{proof}
+
+    The following result is a version of Laplace's method in which the asymptotic concerns both the integrand and the domain of integration.
+    \begin{lemma}
+        We consider a family of Borel sets $\{A_\lambda\}_{\lambda\geq 0}$ of $\R^d$, and two functions $f$ and $g$.
+        We are interested in computing the leading-order asymptotics as $\lambda\to+\infty$ of quantities of the form 
+        $$I_\lambda = \int_{A_\lambda}\e^{-\lambda f(x)}g(x)\,\d x.$$
+        Assume:
+        \begin{enumerate}[i)]
+            \item{\label{hyp:fc2}The function $f$ is $\mathcal C^2$ and has a unique non-degenerate global and local minimum $x_0$ in $\R^d$.}
+            \item{\label{hyp:strong_min}The unique local and global minimum $x_0$ belongs to $\overline A_\lambda$ for all $\lambda\geq 0$.}
+            \item{\label{hyp:gc0}The function $g$ is in $C^0\cap L^1 (\R^d)$, and $g(x_0)\neq 0$.}
+            % \item{There exists $\lambda_0>0$ such that $$\int_{\R^d}\e^{-\lambda_0 f(x)}|g(x)| < +\infty.$$}
+            \item{\label{hyp:domain_conv}The sequence $\sqrt{\lambda}(A_\lambda - x_0)$ converges to a Borel set: $$\bigcap_{\lambda \geq 0} \bigcup_{\mu\geq\lambda} \sqrt{\lambda}(A_\mu-x_0) = \bigcup_{\lambda \geq 0} \bigcap_{\mu \geq \lambda}\, \sqrt\lambda ( A_\mu - x_0) = A_\infty \in \mathcal{B}(\R^d),$$
+            which furthermore has a negligible boundary: $\left|\partial A_\infty \right|=0$.}
+        \end{enumerate}
+        Then, the following asymptotic equivalent holds:
+        \begin{equation}
+            \label{eq:laplace_method}
+            I_\lambda \underset{\lambda\to\infty}{\sim} \e^{-\lambda f(x_0)}g(x_0)\left(\frac{2\pi}{\lambda}\right)^{\frac d2}\left|\det\,\nabla^2 f(x_0)\right|^{-\frac12}\,\mathbb{P}\left(\xi \in A_\infty\right),\quad\,{\xi\sim \mathcal N\left(0,\nabla^2 f(x_0)^{-1}\right)}
+        \end{equation}
+    \end{lemma}
+    \todo[inline]{hypothese ou argument supplementaire car $f(x)\to f(x_0)$ peut-être pb quand $x\to\infty$}
+
+    \begin{proof}
+        Upon replacing $f$ by $f-f(x_0)$, changing $g$ to $g/g(x_0)$ and $x$ to $x-x_0$, we may assume without loss of generality that $x_0 = 0$, with $f(0)=0$ and $\nabla f(0) = 0$, that $H=\nabla^2 f(0)$ is positive definite and that $g(0)=1$.
+
+        Let $0<\varepsilon<\varepsilon_0$, such that $H-\varepsilon_0 I$ is positive definite. By assumptions~\ref{hyp:fc2} and~\ref{hyp:gc0}, and using a Taylor expansion, there exists $\delta>0$ such that for all $|x|<\delta$.
+        $$ \left|f(x)-\frac12x^\intercal H x \right|<\frac\varepsilon2 |x|^2,\quad |g(x)-1|\leq \varepsilon,$$
+        By assumptions~\ref{hyp:gc0} and~\ref{hyp:strong_min} we are also free to assume that, $f(x) > \eta$ for $|x|\geq \delta$ and some $\eta>0$.
+
+        Writing $I_\lambda$ as the sum of a local term and a remainder,
+        \begin{equation}
+            \label{eq:l7_pf1}
+            I_\lambda = \int_{A_\lambda \cap B(0,\delta)} \e^{-\lambda f(x)}g(x)\,\d x + \int_{A_\lambda\setminus B(0,\delta)}\e^{-\lambda f(x)}g(x)\,\d x,
+        \end{equation}
+        we note that we can bound the remainder term by a quantity which is exponentially small with respect to $\lambda$:
+        $$\left|\int_{A_\lambda\setminus B(0,\delta)} \e^{-\lambda f(x)}g(x)\,\d x \right| \leq \e^{-\lambda \eta} \| g\|_{L^1(\R^d)}.$$
+
+        Next, we bound the local term from above: 
+        \[\int_{A_\lambda \cap B(0,\delta)} \e^{-\lambda f(x)}g(x)\,\d x \leq (1+\varepsilon)\int_{A_\lambda \cap B(0,\delta)}\e^{-\frac\lambda2x^\intercal (H-\varepsilon I) x}\,\d x \leq (1+\varepsilon)\int_{A_\lambda}\e^{-\frac\lambda 2x^\intercal(H-\varepsilon I)x}\,\d x.\]
+        Using $y=\sqrt\lambda x$, we obtain
+        \[\int_{A_\lambda} \e^{-\frac\lambda2 x^\intercal (H-\varepsilon I)x}\,\d x  = \lambda^{-\frac d2}\int_{\sqrt\lambda A_\lambda}\e^{-\frac12 y^\intercal (H-\varepsilon I) y}\,\d y = \left(\frac{2\pi}\lambda\right)^{\frac d2}|\det\,(H-\varepsilon I)|^{-\frac12}\P(\xi_{\varepsilon} \in \sqrt\lambda A_\lambda),\]
+        where $\xi_\varepsilon \sim \mathcal N(0,(H-\varepsilon I)^{-1})$. Denote 
+        \[C_\varepsilon = (1+\varepsilon)\left(2\pi\right)^{\frac d2}|\det\,(H-\varepsilon I)|^{-\frac12}.\]
+        Then, we get
+        \[\underset{\lambda\to\infty}{\overline{\lim}}\,\lambda^{\frac d2}{I_\lambda}\leq \underset{\lambda\to\infty}{\overline{\lim}} \lambda^{\frac d2}\e^{-\lambda\eta}\|g\|_{L^1}  + C_\varepsilon\P(\xi_\varepsilon\in\sqrt\lambda A_\lambda) = C_\varepsilon\P(\xi_\varepsilon \in A_\infty),\]
+        since assumption~\ref{hyp:domain_conv} is equivalent to the Lebesgue almost-everywhere convergence of $\mathbbm{1}_{\sqrt\lambda (A_\lambda-x_0)}$ to $\mathbbm{1}_{A_\infty}$.
+        Since $\xi_\varepsilon \overset{\cL}{\underset{\varepsilon\to 0}{\longrightarrow}} \xi \sim \mathcal N(0,H^{-1})$ and $|\partial A_\infty|=0$, the Portmanteau lemma together with $C_\varepsilon \overset{\varepsilon_\to 0}{\longrightarrow} C = (2\pi)^{\frac d2} | \det H|^{-\frac12}$ yields the desired upper bound upon taking the limit $\varepsilon\to 0$.
+
+        For the lower bound, we write similarly
+        \[\int_{A_\lambda \cap B(0,\delta)} \e^{-\lambda f(x)}g(x)\,\d x\geq (1-\varepsilon)\int_{A_\lambda \cap B(0,\delta)}\e^{-\frac\lambda2x^\intercal(H+\varepsilon I)x}\,\d x,\]
+        whereby an identical argument yields
+        \[ \underset{\lambda\to\infty}{\underline\lim}\,\lambda^{\frac d2}I_\lambda \geq \underset{\lambda\to\infty}{\underline\lim}\,\lambda^{\frac d2}\e^{-\lambda\eta}\|g\|_{L^1} + C_\varepsilon'\P\left(\xi_\varepsilon' \in \left[\sqrt\lambda A_\lambda \cap B(0,\sqrt\lambda\delta)\right]\right)= C_\varepsilon'\P(\xi_\varepsilon'\in A_\infty),\]
+        where this time $\xi_\varepsilon' \sim \mathcal N(0,(H+\varepsilon I)^{-1})$, $ C_\varepsilon ' = (1-\varepsilon) (2\pi)^{\frac d2} |\det (H+\varepsilon I)|^{-\frac 12}$, and where we used the almost-everywhere convergence $\mathbbm 1_{\sqrt \lambda A_\lambda} \mathbbm 1_{B(0,\sqrt \lambda \delta)} \overset{\lambda\to \infty}{\longrightarrow} \mathbbm 1_{A_\infty}$.
+        Using the convergence in distribution $\xi_\varepsilon' \overset{\cL}{\underset{\varepsilon\to 0}{\longrightarrow}}\xi$ with the Portmanteau lemma once again, and the convergence $C_\varepsilon'\to C$, we finally get
+        \[C \P(\xi\in A_\infty) \leq \underset{\lambda\to\infty}{\underline\lim}\,\lambda^{\frac d2}I_\lambda\leq \underset{\lambda\to\infty}{\overline\lim}\,\lambda^{\frac d2}I_\lambda \leq C \P(\xi\in A_\infty).\]
+    \end{proof}
+
+% \section{Results}
+%     In the following proposition we record (standard) facts on the spectral decomposition of the harmonic oscillator $K^{(i)}$, or the Dirichlet realization thereof on three model spaces.
+
+%     \begin{theorem}[Harmonic approximation.]
+        
+%     \end{theorem}
+
+%     \paragraph{Changing the realization of $K^{(i)}$}
+%     % \todo[inline]{verifier que le spectre de $K^{(i)}$ agissant sur $L^2(\sqrt\beta (\Omega-z_i))$ tend bien vers celui sur $L^2(\R^d)$ -- on peut alors retrouver l'asymptotique au premier ordre de tout le spectre de~$\cL_\beta$ en suivant la preuve donnée dans CFKS.}
+%     The harmonic approximation $H^{(i)}_\beta/\beta$ of $H_\beta/\beta$ around $z_i$ acting on $\Omega_\beta$ is unitarily equivalent to a $\beta$-independent harmonic oscillator $K^{(i)}$ realized on the $\beta$-dependent domain $\sqrt\beta U^{(i)}(\Omega_\beta-z_i)$.
+%     We aim to show that in fact one can instead consider the realization of $K^{(i)}$ on the model space $S^{(i)}$ without changing the first-order spectral asymptotics as $\beta\to\infty$.
+
+%     \begin{proposition}
+
+%     \end{proposition}
+
+%     \begin{proof}
+%         {\bf{The supercritical case $S^{(i)}=\R^d$.\newline}}
+%         We first prove an upper bound $\underset{\beta\to\infty}{\underline{\lim}}\,\lambda_k(\beta) \leq \lambda_k$.
+%         We fix a $\mathcal{C}_c^\infty(\R^d)$ cutoff function $\chi$ such that $\mathrm{supp}\chi \subset B(0,1)$, $0\leq \chi\leq 1$ and $\chi = 1$ on $B(0,\frac12)$. Define $\chi_\beta^{(i)} = \chi(\beta^{-\frac12}\varepsilon_\beta^{-(i)}\cdot)$.
+%         Fix $k\in \N$, and consider for $1\leq j\leq i$ the quasi-modes
+%         $\psitilde_j^{(i)} = \psi_j^{(i)}\chi_\beta^{(i)}$, so that $\mathrm{supp}\, \psitilde_j^{(i)} \subset \sqrt\beta U^{(i)\intercal}(\Omega_\beta-z_i)$.
+%         We compute
+%         \begin{align*}
+%             \delta_{jk}-\left\langle \psitilde_j^{(i)} \middle|\psitilde_k^{(i)}\right\rangle &=\left\langle \psitilde_j^{(i)}(1-\chi_\beta^{(i)}) \middle|\psitilde_k^{(i)}(1-\chi_\beta^{(i)})\right\rangle.
+%         \end{align*}
+%         whence there exists a constant $C>0$ independent of $\beta$ such that
+%         $$
+%         \left|\delta_{jk}-\left\langle \psitilde_j^{(i)} \middle|\psitilde_k^{(i)}\right\rangle\right| \leq \int_{|2x| > \sqrt \beta\varepsilon_\beta^{(i)}}\left|\psi^{(i)}_j(x)\psi^{(i)}_k(x)\right|\leq \e^{-C\beta\varepsilon_\beta^{2(i)}}.
+%         $$
+%         Since $\beta\varepsilon_\beta^{(i)2}\to\infty$, the matrix $\left(\left\langle \psitilde_j^{(i)} \middle|\psitilde_k^{(i)}\right\rangle \right)_{j,k}$ is non-singular for $\beta>\beta_0$ large enough, and the $\left\{\psitilde_j^{(i)}, 1\leq j \leq k\right\}$ then span a $k$-dimensional subspace.
+%     \end{proof}
+
+    % \paragraph{Rough localization of the spectrum, in the spirit of CFKS.\\}
+
+    % The following theorem is the analog of Theorem 11.1 from CFKS, adapted to the case with Dirichlet boundary conditions.
+    % \begin{theorem}[Rough asymptotics for the Dirichlet spectrum of $\cL_\beta$.]
+    %     We assume that~$V$ has no critical points on~$\partial \Omega$. Denote
+    %     \[\{\lambda_{1,\beta} < \lambda_{2,\beta} \leq \lambda_{3,\beta}\leq \dotsm \} = \sigma(-\cL_\beta),\]
+    %     then for all $m\geq 1$, 
+    %     \[\lim_{\beta\to\infty}\lambda_{m,\beta} = \lambda_{m}^{\mathrm{H}} \]
+    %     where $\lambda_m^{\mathrm{H}}$ is the $m$-th largest element of
+    %     \[\bigcup_{i=0}^k \sigma(K^{(i)}),\]
+    %     where $K^{(i)}$ is considered as an operator acting on the full space~$L^2(\R^d)$.
+    % \end{theorem}
+    % \begin{proof}
+    %     {\bf{1. Upper bound\\}}
+    %     We show
+    %     $$\underset{\beta\to\infty}{\lim\sup}\,\lambda_{m,\beta} \leq \lambda_m^{\mathrm{H}}.$$
+    %     Fix a model cutoff function
+    %     \[\chi \in \mathcal \mathcal{C}^\infty_c(\R^d),\quad \chi \equiv 1\,\text{on }\overline{B(0,1)},\quad \chi \equiv 0\, \text{on }B(0,2)^{\mathrm c}.\]
+    %     Define~$\chi_\beta^{(i)}(x) = \chi(\beta^\delta\Sigma^{-(i)}(x-z_i))$ for some wisely chosen~$0<\delta<\frac12$, and define
+    %     \[\chi_\beta^{(k+1)} = \sqrt{\mathbbm{1}_\Omega - \sum_{i=0}^k \chi_\beta^{(i)2}},\]
+    %     whence it is clear that~$(\chi_\beta^{(i)})_{i=0,\dots,k+1}$ is a partition of unity on~$\Omega$ for~$\beta$ large enough.\todo[inline]{explicit bound}
+    %     % $$\beta>\underset{i=0,\dots,k}{\max}\left(\frac{2}{\underset{x\in\partial\Omega}{\inf}|\Sigma^{-(i)}(x-z_i)|}\right)^{1/\delta}.$$
+    %     % (Here we note that there is some freedom in the choice of the~$\chi_\beta^{(i)}$, for instance it may be opportune to adapt the support of~$\chi_\beta^{(i)}$ using~$\Sigma^{(i)}$ in order to get better estimates.)
+    %     Further note that we may take for any~$\varepsilon>0$,
+    %     \[\left\||\nabla \chi|^2\right\|_{\infty} \leq (1+\varepsilon),\quad \mathrm{supp}(\nabla \chi) \subseteq \overline{B(0,2)}\setminus B(0,1)\]
+    %     so that
+    %     \[\left\||\nabla \chi_\beta^{(i)}|^2\right\|_{\infty} \leq (1+\varepsilon)\beta^{2\delta}\|\Sigma^{-(i)}\|^2,\quad \mathrm{supp}(\nabla \chi_\beta^{(i)})\subseteq z_i+\Sigma^{(i)}\left[\overline{B(0,2\beta^{-\delta})}\setminus B(0,\beta^{-\delta})\right].\]
+
+    %     The next point is the following operator estimate: for all $i=0,\dots,k$, 
+    %     \[\|\chi_{\beta}^{(i)}\left(H_\beta - H_\beta^{(i)}\right)\chi_{\beta}^{(i)}\|\leq C \beta^{2-3\delta},\]
+    %     for some constant~$C>0$ depending on~$V$ and the dimension~$d$, but not~$\beta$ 
+    %     % (in particular we require~$\delta > 2/3$ for this bound to be useful)
+    %     Since this is a multiplication operator by a smooth function (the Laplacian terms cancel out), the estimate is simply derived from an~$L^\infty$ bound on the difference between~$U_\beta$ and an appropriate Taylor expansion on~$\mathrm{supp}\,\chi_\beta^{(i)}$.
+    %     Note this estimate applies whatever realization we choose for~$H_\beta^{(i)}$. We have
+    %     {
+    %     \[\chi_\beta^{(i)}\left(H_\beta-H_\beta^{(i)}\right)\chi_\beta^{(i)} = \underset{E_1}{\underbrace{\beta^2\chi_\beta^{(i)}\left(\frac{|\nabla V|^2}4 - (x-z_i)^\intercal\Sigma^{(i)}(x-z_i)\right)\chi_\beta^{(i)}}} + \underset{E_2}{\underbrace{\frac{\beta}2\chi_\beta^{(i)}\left(\Delta V - \Delta V(z_i)\right)\chi_\beta^{(i)}}},\]
+    %     }
+    %     First, using a second-order Taylor expansion on~$F = \frac{|\nabla V|^2}{4}$ at~$z_i$,
+    %     \[E_1(x) = \beta^2\chi_\beta^{(i)2}(x) \frac12\int_0^1(1-t)^2 D^3 F(z_i+t(x-z_i))(x-z_i)^{\otimes 3}\,\d t,\]
+    %     whence
+    %     \[\|E_1\|_\infty \leq d^{\frac32}\|D^3 F\|_\infty\beta^{2-3\delta},\]
+    %     where we used
+    %     \[|D^3 F(z_i+t(x-z_i))\cdot (x-z_i)^{\otimes 3}| \leq \|D^3 F\|_\infty |x-z_i|_1^3 \leq d^{\frac32}\|D^3 F\|_\infty|x-z_i|^3\]
+    %     by a Cauchy--Schwarz inequality, and \[|z_i-x| \leq 2\beta^{-\delta}\quad\text{on }\mathrm{supp}\,\chi_\beta^{(i)}.\]
+    %     Second, using a zeroth-order Taylor expansion on~$\Delta V$ at~$z_i$, we obtain analogously
+    %     \[\|E_2\|_\infty \leq \|\nabla \Delta V\|_{\infty}\beta^{1-\delta}.\]
+    %     Note if~$\delta<\frac12$, the dominant term is~$E_1$, which yields the claimed estimate.
+
+    %     Fix an eigenvalue index~$n$. There exists~$i(n)$ and a harmonic mode~$\psi_{n,\beta}$ of~$H_\beta^{(i)}$ acting on the full space such that
+    %     \[H_\beta^{(i(n))}\psi_n = \beta \lambda_n^{\mathrm{H}}\psi_n.\]
+    %     We note that
+    %     \[\psi_{n,\beta}(x) = p_n(\sqrt{\beta}(x-z_i))\e^{-\frac{\beta}{4}\sum_{j=1}^d |\nu_j^{(i)}|\left\langle x-z_i,v_j^{(i)}\right\rangle^2},\]
+    %     where~$p_n$ is an appropriately normalized Hermite polynomial.
+    %     We define the rough quasimode
+    %     \[\widetilde{u}_{n,\beta} = \chi_\beta^{(i(n))}\psi_n,\]
+    %     and proceed to estimate
+    %     \[\langle \widetilde{u}_n,\widetilde{u}_m\rangle\]
+    %     for~$m\neq n$. If~$i(n)\neq i(m)$, that is if the two quasimodes correspond to different critical points, the~$\chi_\beta^{(i(n))},\,\chi_\beta^{[i(m)]}$ have disjoint supports as soon as
+    %     \[\beta > \left(\frac{4}{\underset{0\leq i \neq j \leq k}{\min}|z_i-z_j|}\right)^{1/\delta},\]
+    %     hence the quasimodes are orthogonal. Otherwise, since
+    %     \[\langle \psi_{n,\beta},\psi_{m,\beta}\rangle = \delta_{nm},\]
+    %     we may write 
+    %     \begin{equation}
+    %         \begin{aligned}
+    %             |\langle \widetilde{u}_{n,\beta},\widetilde{u}_{m,\beta} \rangle| &= \int_{\R^d}\left(1-\chi_{\beta}^{(i(n))2} \right) \psi_{n,\beta}\psi_{m,\beta}\\
+    %             &\leq \int_{\R^d \setminus B(z_i,\beta^{-\delta})}\left|p_n\left(\sqrt{\beta}(x-z_{i(n)})\right)p_m\left(\sqrt{\beta}(x-z_{i(n)})\right)\right|\e^{-\frac{\beta}{4}\sum_{j=1}^d |\nu_j^{(i(n))}|\left\langle x-z_{i(n)},v_j^{(i(n))}\right\rangle^2}\,\d x\\
+    %             &= \beta^{-d/2}\int_{\R^d\setminus B(0,\beta^{1/2-\delta})} |p_n(x)p_m(x)|\e^{-\frac{1}{4}\sum_{j=1}^d |\nu_j^{(i(n))}|\left\langle x,v_j^{(i(n))}\right\rangle^2}
+    %         \end{aligned}
+    %     \end{equation}
+    %     \todo[inline]{faire la preuve avec des cutoffs anisotropiques pour avoir des meilleures bornes sur l'orthogonalité / l'approximation de Taylor -- là c'est un peu bourrin pour être pratique}
+        
+    % \end{proof}
+    \bibliographystyle{plain}
+    \bibliography{bibliography.bib}
+
+\end{document}

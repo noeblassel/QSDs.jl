@@ -1,0 +1,4 @@
+- [ ] Estimées d'Agmon pour cas harmonique critique
+- [ ] Laplace pour quasimodes u_0
+- [x] Resolvante compacte: passe en 1D puis ecrire le produit tensoriel -> base Hilbertienne de e.v.  
+- [ ] Réécrire la preuve pour les cas d-dimensionnel général
