@@ -61,7 +61,7 @@
 \newcommand{\localNeighborhood}[2][]{\mathcal{O}_{#2}^{#1}} %local neighborhoods of the boundary
 \newcommand{\localCap}[2][]{C_{#2}^{#1}}
 \newcommand{\gammaPerturbation}[1]{\gamma^{(#1)}}
-
+\newcommand{\localCuboid}[1]{\mathcal R_{#1}}
 
 %% hessian
 \newcommand{\hessPassage}[2][]{U^{(#2)#1}} % orthogonal transfer matrix to an eigenbasis #2 = optional \intercal
@@ -81,7 +81,7 @@
 \newcommand{\localEigval}[3][]{\lambda^{(#2)}_{#3,\epsLimit{#2}#1}} % k-th eigenvalue of the local oscillator K^{(i)}_\alpha_i (#1: optional shift, #2: 
 \newcommand{\globalEigval}[2]{\lambda^{\mathrm{H}}_{#1,#2}} % k-th eigenvalue of tensor product of the K^{(i)}. (#1: k, #2: vector of boundary conditions).
 
-
+\newcommand{\fineCutoff}[1]{\xi_\beta^{(#1)}}
 \newcommand{\scalingExp}{t}
 \newcommand{\shift}{\rho} % for proof of harmonic approximation
 
@@ -95,7 +95,14 @@
 \newcommand{\deltai}{\delta^{(i)}}
 \newcommand{\varepsiloni}{\varepsilon^{(i)}}
 
+\newcommand{\widesim}[2][1.5]{
+  \mathrel{\overset{#2}{\scalebox{#1}[1]{$\sim$}}}
+}
+
+\newcommand{\bassin}[1][]{\mathrm{B}^{#1}}
+
 \renewcommand{\o}{\mathrm{o}}
+\renewcommand{\O}{\mathcal{O}}
 \newtheorem{lemma}{Lemma}
 \newtheorem{conjecture}{Conjecture}
 \newtheorem{theorem}{Theorem}
@@ -103,6 +110,7 @@
 \newtheorem{proposition}{Proposition}
 \newtheorem{definition}{Definition}
 \newtheorem{hypothesis}{Assumption}
+\newtheorem{remark}{Remark}
 
 \title{Domain-sensitivity analysis for Dirichlet eigenvalues of the Witten Laplacian in the semiclassical limit.}
 
@@ -270,11 +278,14 @@ cross/.default={1pt}}
     % A big issue is to show that~$\lambda_{2,\beta}^{h_0,h_1}$ is simple and isolate it from the rest of the spectrum.
     \tableofcontents
 
-    \section{Motivation: acceleration methods in molecular dynamics.}
+    \section{Introduction}
+    \label{sec:motivation}
+    
 
     \section{Setting and notations}
+    \label{sec:notations}
     In this paragraph, we introduce various notations which will be used throughout this work;
-    We consider a potential function,~$V : \R^d \to \R$, which we assume to be smooth and Morse.
+    We consider a potential function,~$V:\R^d \to \R$, which we assume to be smooth and Morse.
 
     \paragraph{A metastable diffusion process.}
     We are interested in understanding the behavior of metastable exit and relaxation times for the overdamped Langevin dynamics
@@ -351,11 +362,12 @@ cross/.default={1pt}}
     For convenience, we will define the following half-spaces associated with each critical point:
     \begin{equation}
         \label{eq:half_space}
-        \halfSpace{i}(\alpha) = \hessPassage[\intercal]{i}\left[(-\infty,\alpha)\times\R^{d-1}\right]
+        \halfSpace{i}(\alpha) = \hessPassage{i}\left[(-\infty,\alpha)\times\R^{d-1}\right]
     \end{equation}
 
     and, for $r>0$,~$B_r$ will denote the Euclidean ball centered on the origin with radius~$r$.
     \subsection{Geometric assumptions on the domains~$\Omega_\beta$.\newline}
+    \label{subsect:harm_hypotheses}
     We are specifically interested in studying the case in which all the domains encompass one potential well of~$V$, which furthermore contain every saddle point connecting it to some other well in their closure.
     Loosely, one should think of~$\Omega_\beta$ as a positive temperature outward perturbation of the bassin of attraction attached to the bottom of the well for the steepest descent dynamics
     \begin{equation}
@@ -440,24 +452,24 @@ cross/.default={1pt}}
     \begin{hypothesis}     
         There exist functions~$\deltaRadius{i},\gammaPerturbation{i}:\R_+^*\to\R_+$ such that the following holds for~$\beta$ large enough:
         \begin{equation}
-            \label{eq:supercritical_scaling_delta}
+            \label{eq:domain_sandwich_inclusion}
             \tag{\bf H1}
             \left\{\begin{aligned}
                 &\sqrt\beta\deltaRadius{i}(\beta)\overset{\beta\to\infty}{\longrightarrow}\,+\infty,\\
                 &\sqrt\beta\gammaPerturbation{i}(\beta)\overset{\beta\to\infty}{\longrightarrow}\,0,\\
-                &\localNeighborhood[-]{i} \subseteq B(z_i,\deltaRadius{i})\cap\Omega_\beta \subseteq \localNeighborhood[+]{i},
+                &\localNeighborhood[-]{i}(\beta) \subseteq B(z_i,\deltaRadius{i}(\beta))\cap\Omega_\beta \subseteq \localNeighborhood[+]{i}(\beta),
             \end{aligned}\right.
         \end{equation}
         where we denote
         \begin{equation}
             \label{eq:capped_balls}
-            \localNeighborhood[\pm]{i} = z_i + B_{\deltaRadius{i}(\beta)} \cap \halfSpace{i}\left(\frac{\epsLimit{i}}{\sqrt\beta}\pm\gammaPerturbation{i}\right),
+            \localNeighborhood[\pm]{i}(\beta) = z_i + B_{\deltaRadius{i}(\beta)} \cap \halfSpace{i}\left(\frac{\epsLimit{i}}{\sqrt\beta}\pm\gammaPerturbation{i}(\beta)\right),
         \end{equation}
         recalling the definition of the half-space~\eqref{eq:half_space}.
     \end{hypothesis}
 
     Geometrically, the sets~\eqref{eq:capped_balls} correspond to hyperspherical caps centered around~$z_i$ and cut in the direction~$\hessEigvec{i}{1}$. Thus, this condition fixes the orientation convention for~$\hessEigvec{1}{i}$ in the case~$z_i$ is close to the boundary, namely,~$\hessEigvec{i}{1}$ always points outwards from~$\partial\Omega_\beta$ (including when~$z_i$ is outside the domain).
-    The content of Assumption~\eqref{eq:supercritical_scaling_delta} is that, up to negligible perturbations relative to~$\beta^{-\frac12}$, the boundary is shaped like a hyperplane which is normal to the first eigenvector of the Hessian,~$\hessEigvec{i}{1}$, in a local neighborhood of size~$\deltaRadius{i}(\beta)$ around~$z_i$.
+    The content of Assumption~\eqref{eq:domain_sandwich_inclusion} is that, up to negligible perturbations relative to~$\beta^{-\frac12}$, the boundary is shaped like a hyperplane which is normal to the first eigenvector of the Hessian,~$\hessEigvec{i}{1}$, in a local neighborhood of size~$\deltaRadius{i}(\beta)$ around~$z_i$.
     Thus, we also write:
     we also write
     \begin{equation}
@@ -472,7 +484,7 @@ cross/.default={1pt}}
     \todo[inline]{commenter dans le cas des points selles d'ordre un qu'il s'agit de perturbations d'ordre $1/\sqrt\beta$ du bassin d'attraction}
     In Figure~\ref{fig:Vi_schematic}, we represent schematically the local geometry of~$\partial\Omega_\beta$, in a case where~$z_i$ is close to and inside the boundary.
     \todo[inline]{Commenter cas 1D gratuit}
-    We make the following further assumption concerning the scaling of~$\epsBoundary{i}$ and~$\deltaRadius{i}$. In fact, assuming~\eqref{eq:supercritical_scaling_delta}, it comes at no cost to generality, as will be discussed below.
+    We make the following further assumption concerning the scaling of~$\epsBoundary{i}$ and~$\deltaRadius{i}$. In fact, assuming~\eqref{eq:domain_sandwich_inclusion}, it comes at no cost to generality, as will be discussed below.
     \begin{hypothesis}
         There exists~$0<\scalingExp<\frac16$ such that, for all~$0\leq i\leq m+r$:
         
@@ -492,8 +504,8 @@ cross/.default={1pt}}
         \end{equation}}
         \end{itemize}
     \end{hypothesis}
-    This assumption comes at no cost of generality if we assume~\eqref{eq:supercritical_scaling_delta}. Indeed, we are always free to consider instead~$\deltaRadius{i}(\beta) \land \beta^{\scalingExp-\frac12}$ in the case where~$z_i$ is close to the boundary, and~$\deltaRadius{i} = (1-\shift)\epsBoundary{i}(\beta)\land\beta^{\scalingExp-\frac12}$ for some~$0<\shift<1$ in the case where~$z_i$ is far from the boundary.
-    We note that both these choices still satisfy the first condition of~\eqref{eq:supercritical_scaling_delta}, and thus also the third for~$\beta$ large enough.
+    This assumption comes at no cost of generality if we assume~\eqref{eq:domain_sandwich_inclusion}. Indeed, we are always free to consider instead~$\deltaRadius{i}(\beta) \land \beta^{\scalingExp-\frac12}$ in the case where~$z_i$ is close to the boundary, and~$\deltaRadius{i} = (1-\shift)\epsBoundary{i}(\beta)\land\beta^{\scalingExp-\frac12}$ for some~$0<\shift<1$ in the case where~$z_i$ is far from the boundary.
+    We note that both these choices still satisfy the first condition of~\eqref{eq:domain_sandwich_inclusion}, and thus also the third for~$\beta$ large enough.
     The motivation for choosing this range for the exponent~$\scalingExp$ will be made clear in the proof of Lemma~\ref{lemma:taylor_bound}.
 
     Finally, we will need the following technical assumption on the growth of~$\deltaRadius{i}(\beta)$.
@@ -555,11 +567,22 @@ cross/.default={1pt}}
     %~$$ \lambda_{1,\beta} \leq \lambda_{2,\beta} \leq \dotsm~$$
     % the sequence of eigenvalues of~$-\cL_\beta$ on the domain~$H_0^1\cap H^2(\Omega_\beta; \mu) \subset L^2_\mu$, for which it is self-adjoint with pure point spectrum.
 
-    \section{Coarse asymptotics of the low-lying spectrum}
+    \section{Limiting behavior of the low-lying spectrum}
+    \label{sec:harm}
     We first aim to generalize the harmonic approximation of~\cite{S83} to the case of a temperature-dependent Dirichlet boundary condition, treating in particular the case in which the distance to the boundary scales critically with the temperature.
-    That is, we aim to show the following limit
-   ~$$\underset{\beta\to+\infty}{\lim}\,\lambda_{k,\beta} = \lambda_{k,\alpha}^{\mathrm H},$$
-    where by~$\lambda_{k,\alpha}^{\mathrm H}$ we denote the~$k$-th eigenvalue of some temperature-independent operator defined below (see Equation~\eqref{eq:global_harmonic_approximation_conj}), the harmonic approximation to the Witten Laplacian, and~$\alpha\in(-\infty,+\infty]^{1+m+r}$ is the vector whose $i$-th component is given by the limit in~\eqref{eq:epsLimit_definition}, encoding the Dirichlet boundary condition of the limiting operator.
+    We will show the following theorem:
+    \begin{theorem}[Harmonic approximation]
+        \label{thm:harm_approx}
+        Assume that~,~\eqref{eq:epsLimit_definition},~\eqref{eq:domain_sandwich_inclusion} and~\eqref{eq:scaling_deltai} hold, and let~$k\geq 1$. Then the following holds:
+        \begin{equation}
+            \label{eq:harm_limit}
+            \underset{\beta\to\infty}{\lim}\,\lambda_{k,\beta} = \lambda_{k,\alpha}^{\mathrm{H}},
+        \end{equation}
+        where~$\alpha$ is given by~\eqref{eq:global_alpha}, and~$\lambda_{k,\beta}$ is the~$k$-th Dirichlet eigenvalue of the operator~\eqref{eq:generator} in~$\Omega_\beta$.
+    \end{theorem}
+    In the above,~$\lambda_{k,\alpha}^{\mathrm H}$ denotes the~$k$-th eigenvalue of some temperature-independent operator defined in~Equation~\eqref{eq:global_harmonic_approximation_conj}, the harmonic approximation to the Witten Laplacian. The vector~$\alpha\in(-\infty,+\infty]^{1+m+r}$ encodes the asymptotic distance to the boundary of each critical points in the semiclassical scaling, and its~$i$-th component is given by the limit~$\epsLimit{i}$.
+    The proof of Theorem~\ref{thm:harm_approx} relies on the construction of approximate eigenvectors for the Witten Laplacian, which are composed 
+
     \subsection{Definition of the harmonic approximation}
     This operator is obtained by considering local approximations around each critical point~$z_i$, which are harmonic oscillators whose realization depends on the value of the limit~$\epsLimit{i} \in [0,\infty]$.
     % \begin{definition}
@@ -620,7 +643,7 @@ cross/.default={1pt}}
 
     The full harmonic oscillator will serve (after an appropriate change of scale), as a local approximation of~$H_\beta$ around critical points~$z_i$ which are far from the boundary, or to model the behaviour in the directions~$\hessEigvec{i}{j}$,~$2\leq j \leq d$ in the case where~$z_i$ is (super)critically close to the boundary.
     To construct a harmonic model for~$H_\beta$ around~$z_i$ critically close to the boundary in the direction~$\hessEigvec{i}{1}$, we must consider Dirichlet realizations of the harmonic oscillator, whose study is the object of the next paragraph.
-    \subsection{Definition of the critical oscillators.}\label{subsec:critical_oscillators}
+    \subsection{Critical oscillators.}\label{subsec:critical_oscillators}
     In this paragraph, we introduce Dirichlet realizations for the harmonic oscillator which will serve as the basis for the construction of local models for~$H_\beta$ around critical points which are (super)critically close to the boundary.
 
     We consider the following dense subspace of~$L^2([a,b))$ for~$a<b\leq +\infty$:
@@ -949,7 +972,7 @@ cross/.default={1pt}}
         \label{eq:partition_of_unity_condition}
         \|\nabla\sqrt{1-\chi^2}\|_\infty < +\infty,
     \end{equation}
-    which may be easily enforced by choosing~$\chi$ such that~$\chi \underset{a^+}{\sim} \mathrm{exp}\left(-\frac1{x-a}\right)$,~$\chi\underset{b^-}{\sim}\mathrm{exp}\left(-\frac1{b-x}\right)$, say for~$\supp\,\chi = [a,b]$.
+    which may be easily enforced by choosing~$\chi$ such that~$\chi \widesim{a^+} \mathrm{exp}\left(-\frac1{x-a}\right)$,~$\chi\widesim{b^-}\mathrm{exp}\left(-\frac1{b-x}\right)$, say for~$\supp\,\chi = [a,b]$.
     Let us next define the localized cutoff function:
     \begin{equation}
         \label{eq:cutoff}
@@ -966,7 +989,7 @@ cross/.default={1pt}}
         \label{eq:linf_bound_nabla_chi}
         \|\partial^\alpha\chi_\beta^{(i)}\|_\infty = \|\partial^\alpha \chi\|_\infty \deltai(\beta)^{|\alpha|},
     \end{equation}
-    for any multi-index~$\alpha$, hence~$\|\partial^\alpha \chi_\beta^{(i)}\|_\infty = \mathrm{o}(\beta^{\frac{|\alpha|}2})$ for~$|\alpha|\leq 2$.
+    for any multi-index~$\alpha$, hence~$\|\partial^\alpha \chi_\beta^{(i)}\|_\infty = \o(\beta^{\frac{|\alpha|}2})$ for~$|\alpha|\leq 2$.
     
     We stress that, although~$\chi_\beta^{(i)}$ does not itself vanish on~$\partial \Omega_\beta$ in general in the case where~$z_i$ is (super)critically close to the boundary, we still have
    ~$\widetilde\psi_{\beta,k,\alpha}^{(i)}\in H_0^1\cap H^2(\Omega_\beta)$ provided the harmonic eigenmode~$\psi_{\beta,k,\alpha}^{(i)}$ vanishes on~$C_i(\beta)$, where we recall the definition~\eqref{eq:def_ball_cap} of the spherical cap associated with~$z_i$.
@@ -1069,22 +1092,14 @@ cross/.default={1pt}}
         which yields the desired bound, and which is small with respect to~$\beta$ since~$0<\scalingExp<\frac16$.
     \end{proof}
 
+    \subsection{Proof of Theorem~\ref{thm:harm_approx}}
     We conclude this section by giving the proof of the so-called harmonic approximation in the case of a moving boundary, which posits that the first-order asymptotics of any given eigenvalue at the bottom of the spectrum of~$H_\beta$ is given by the corresponding eigenvalue of~$H_\beta^{\mathrm H}$ in the limit~$\beta\to\infty$.
     The main novelty is the accomodation of moving Dirichlet boundary conditions, and in particular allowing the computation of asymptotic energies for eigenstates localized around critical points which are (super)critically close to the boundary.
-
-    \begin{theorem}[Harmonic approximation]
-        \label{thm:harm_approx}
-        Assume that~,~\eqref{eq:epsLimit_definition},~\eqref{eq:supercritical_scaling_delta} and~\eqref{eq:scaling_deltai} hold, and let~$k\geq 1$. Then the following holds:
-        \begin{equation}
-            \label{eq:harm_limit}
-            \underset{\beta\to\infty}{\lim}\,\beta^{-1}\lambda_{k,\beta} = \lambda_{k,\alpha}^{\mathrm{H}},
-        \end{equation}
-        where~$\alpha$ is given by~\eqref{eq:global_alpha}, and~$\lambda_{k,\beta}$ is the~$k$-th Dirichlet eigenvalue of the Witten Laplacian in~$\Omega_\beta$.
-    \end{theorem}
 
     \begin{proof}[Proof of Theorem~\ref{thm:harm_approx}]
         % \linebreak
         Without loss of generality, we assume~\eqref{eq:deltai_polybound_close} and~\eqref{eq:deltai_polybound_far}.
+        To show~\eqref{eq:harm_limit}, we study eigenvalues of the Witten Laplacian~\eqref{eq:witten_laplacian}, since these are related to those of~$-\cL_\beta$ via a simple multiplication by~$\beta$.
         As in~\cite{S83}, the strategy is to construct approximate eigenvectors for~$H_\beta$, which (roughly speaking) consist of eigenvectors of each of the local oscillators~$H_{\beta,\alpha_i}^{(i)}$, localized around the critical points~$z_i$ by appropriate cutoff functions.
         The main technical novelty compared to previous constructions, besides the construction of critical harmonic models performed in Section~\ref{subsec:critical_oscillators}, is the special care which must be taken to ensure that the quasimodes remain in the appropriate form domains. Once one has constructed valid quasimodes, we will be able to make estimates on the bottom of the spectrum using the Courant--Fischer variational principles.
 
@@ -1096,10 +1111,10 @@ cross/.default={1pt}}
         In fact we need, for each~$0\leq i\leq m+r$, to distinguish two cases:
         \begin{enumerate}[a)]
             \item{If~$z_i$ is far from the boundary, then by Assumption~\eqref{eq:deltai_polybound_far},~$\chi_\beta^{(i)}$ is supported inside~$\Omega_\beta$, and thus the associated quasimodes are indeed in~$H_0^1(\Omega_\beta)$, the form domain of~$H_\beta$.}
-            \item{If~$z_i$ is close to the boundary, then by the third condition in Assumption~\eqref{eq:supercritical_scaling_delta},~$\localNeighborhood[-]{i}\subseteq B(z_i,\deltaRadius{i}(\beta)) \cap \Omega_\beta$ for $\beta$ large enough.}
+            \item{If~$z_i$ is close to the boundary, then by the third condition in Assumption~\eqref{eq:domain_sandwich_inclusion},~$\localNeighborhood[-]{i}(\beta)\subseteq B(z_i,\deltaRadius{i}(\beta)) \cap \Omega_\beta$ for $\beta$ large enough.}
         \end{enumerate}
-        Let us fix~$\shift>0$ such that~$\shift<\alpha_i$ for~$i=0,\dots,m+r$, and fix~$i$ such that~$z_i$ is close to the boundary, i.e.~$\epsLimit{i}<+\infty$. Then, Assumption~\eqref{eq:supercritical_scaling_delta}, straightforwardly implies that there exists~$\beta_0>0$ such that, for all $\beta>\beta_0$, we have the inclusion:
-        \[B(z_i,\deltaRadius{i})\cap \left[z_i + \halfSpace{i}\left(\frac{\epsLimit{i}-\shift}{\sqrt\beta}\right)\right]\subseteq \localNeighborhood[-]{i} \subseteq \Omega_\beta,\]
+        Let us fix~$\shift>0$ such that~$\shift<\alpha_i$ for~$i=0,\dots,m+r$, and fix~$i$ such that~$z_i$ is close to the boundary, i.e.~$\epsLimit{i}<+\infty$. Then, Assumption~\eqref{eq:domain_sandwich_inclusion}, straightforwardly implies that there exists~$\beta_0>0$ such that, for all $\beta>\beta_0$, we have the inclusion:
+        \[B(z_i,\deltaRadius{i})\cap \left[z_i + \halfSpace{i}\left(\frac{\epsLimit{i}-\shift}{\sqrt\beta}\right)\right]\subseteq \localNeighborhood[-]{i}(\beta) \subseteq \Omega_\beta,\]
         recalling the notations~\eqref{eq:half_space},~\eqref{eq:capped_balls}.
         Defining the vector,
         \[\alpha^\shift = (\alpha_i - \shift\1_{\epsLimit{i} < +\infty})_{0\leq j\leq m+r},\]
@@ -1111,7 +1126,7 @@ cross/.default={1pt}}
         {\underline{\bf Step 1b: Energy upper bound.}\newline}
         We set:
         \[\varphi_j = \widetilde\psi_{\beta,k_j,\alpha^\shift_{i_j}}^{(i_j)}, \quad 1\leq j\leq k.\]
-        Note that the~$(\varphi_j)_{1\leq j \leq k}$ span a~$k$-dimensional subspace of~$H_0^1(\Omega_\beta)$, since the Gram matrix~$$\left(\langle \varphi_j,\varphi_{j'}\rangle_{L^2(\Omega_\beta)}\right)_{1\leq j,j'\leq k}$$ is quasi-unitary, i.e. can be written in the form~$I + \mathrm{o}(1)$ as~$\beta\to\infty$. Indeed, we only need to check that the off-diagonal entries converge to zero in this limit.
+        Note that the~$(\varphi_j)_{1\leq j \leq k}$ span a~$k$-dimensional subspace of~$H_0^1(\Omega_\beta)$, since the Gram matrix~$$\left(\langle \varphi_j,\varphi_{j'}\rangle_{L^2(\Omega_\beta)}\right)_{1\leq j,j'\leq k}$$ is quasi-unitary, i.e. can be written in the form~$I + \o(1)$ as~$\beta\to\infty$. Indeed, we only need to check that the off-diagonal entries converge to zero in this limit.
         Fixing~$1\leq j,j'\leq k$, this is clear for~$i_j \neq i_{j'}$, since the corresponding test functions~$\chi_\beta^{(i_j)}$,~$\chi_\beta^{(i_{j'})}$ have disjoint support. If~$i_j = i_{j'}$, the statement is an immediate consequence of the quasi-orthogonality estimate~\eqref{eq:loc_eqb}.
         By the Min-Max Courant--Fischer principle, it then suffices to show that, for all~$u\in \mathrm{Span}(\varphi_j,\,1\leq j \leq k)$,
         
@@ -1130,7 +1145,7 @@ cross/.default={1pt}}
         By our choice of~$(\varphi_j)_{1\leq j\leq k}$, we have~$\lambda \in (\lambda_{j,\alpha^\shift}^{\mathrm H})_{1\leq j\leq k}$, and so~$\lambda\leq \lambda_{k,\alpha^\shift}^{\mathrm H}$.
         We then write:
         \[\left\langle H_\beta u,u\right\rangle = \left\langle H u,u\right\rangle + \left\langle (H_\beta - H)u,u\right\rangle.\]
-        Since~$\left\langle (H_\beta-H)u,u\right\rangle \leq C_{j,\alpha,\shift}\beta^{3\scalingExp+\frac12}\|u\|^2 = \mathrm{o}(\beta)\|u\|^2$ for some constant~$C_{j,\alpha,\shift}>0$, by Lemma~\ref{lemma:taylor_bound}, we only need to estimate the first term.
+        Since~$\left\langle (H_\beta-H)u,u\right\rangle \leq C_{j,\alpha,\shift}\beta^{3\scalingExp+\frac12}\|u\|^2 = \o\beta)\|u\|^2$ for some constant~$C_{j,\alpha,\shift}>0$, by Lemma~\ref{lemma:taylor_bound}, we only need to estimate the first term.
         But, recalling~$\|\psi\| = 1$, we have:
         \[\begin{aligned}
             \left\langle H\chi\psi,\chi\psi\right\rangle &= \left\langle H\psi,\psi\right\rangle - 2\left\langle H\psi,(1-\chi)\psi\right\rangle + \left\langle H(1-\chi)\psi,(1-\chi)\psi\right\rangle\\
@@ -1139,8 +1154,8 @@ cross/.default={1pt}}
         \end{aligned}\]
         where we used a Cauchy--Schwarz inequality to obtain the final inequality.
         We next use the localization estimates given in Lemma~\ref{lemma:localization} to two rightmost terms. Here, we make crucial use of the hypothesis~\eqref{eq:scaling_deltai},
-        which , together with~\eqref{eq:loc_eqa} implies that~$\beta\|(1-\chi)\psi\|=\mathrm{o}(\beta)$, and similarly that~$\left\langle H(1-\chi)\psi,(1-\chi)\psi\right\rangle = \mathrm{o}(\beta)$.
-        Finally,~\eqref{eq:loc_eqc} implies that~$\|u\|^2 = 1 + \mathrm{o}(\beta)$, so that we may write~$Q(u)\leq \|u\|^2(\beta\lambda + \mathrm{o}(\beta))$.
+        which , together with~\eqref{eq:loc_eqa} implies that~$\beta\|(1-\chi)\psi\|=\o(\beta)$, and similarly that~$\left\langle H(1-\chi)\psi,(1-\chi)\psi\right\rangle = \o(\beta)$.
+        Finally,~\eqref{eq:loc_eqc} implies that~$\|u\|^2 = 1 + \o(\beta)$, so that we may write~$Q(u)\leq \|u\|^2(\beta\lambda + \o(\beta))$.
         Since~$\lambda\leq \lambda_{k,\alpha^\shift}^{\mathrm H}$, this implies the upper bound~\eqref{eq:thm1_ub} for this particular choice of~$u$.
         For a general~$u = \sum_j g_j \varphi_j$ in the linear span of the quasimodes, in view of the previous estimation, it is enough to show that the cross terms
         \[g_jg_{j'}\left\langle H_{\beta,\alpha_{i_j}^\shift}^{(i_j)}\varphi_j,\varphi_{j'}\right\rangle\]
@@ -1148,12 +1163,12 @@ cross/.default={1pt}}
         We write, for convenience,~$\chi = \chi_\beta^{(i_j)}$, and~$\psi = \psi^{(i_j)}_{\beta,k_j,\alpha^\shift}$, $\psi' = \psi^{(i_{j'})}_{\beta,k_{j'},\alpha^\shift}$, so that~$\varphi_j = \chi \psi/Z$,~$\varphi_{j'} = \chi\psi'/Z'$, where~$Z,Z'$ are normalizing constants ensuring that the quasimodes have unit~$L^2(\Omega_\beta)$-norm, and again~$H_{\beta,\alpha_{i_j}^\shift}^{(i_j)}=H$, so that we may write:
         \[\begin{aligned}
             \left\langle H\chi\varphi,\chi\varphi'\right\rangle &= \left\langle H\psi,\psi'\right\rangle - \left\langle H\psi,(1-\chi)\psi'\right\rangle - \left\langle H(1-\chi)\psi,\psi'\right\rangle + \left\langle H(1-\chi)\psi,(1-\chi)\psi'\right\rangle\\
-            &= 0 + \mathrm{o}(\beta)\|\psi\|\|\psi'\|,
+            &= 0 + \o(\beta)\|\psi\|\|\psi'\|,
         \end{aligned}
         \]
         using again Cauchy--Schwarz inequalities and the estimates~\eqref{eq:loc_eqa},~\eqref{eq:loc_eqc}, as well as the orthogonality~$\left\langle \psi,\psi'\right\rangle = 0$.
-        It follows, noting in view of~\eqref{eq:loc_eqb} that~$Z,Z' = 1 +\mathrm{o}(\beta)$:
-        \[\left\langle H_\beta u,u\right\rangle \leq (\beta\lambda_{k,\alpha^\shift}^{\mathrm H}+\mathrm{o}(\beta))\|u\|^2,\quad \forall\,u\in\mathrm{Span}\{\varphi_j\}_{1\leq j\leq k},\]
+        It follows, noting in view of~\eqref{eq:loc_eqb} that~$Z,Z' = 1 +\o(\beta)$:
+        \[\left\langle H_\beta u,u\right\rangle \leq (\beta\lambda_{k,\alpha^\shift}^{\mathrm H}+\o(\beta))\|u\|^2,\quad \forall\,u\in\mathrm{Span}\{\varphi_j\}_{1\leq j\leq k},\]
         which concludes the upper bound.
 
         \paragraph{\underline{Step 2: Lower bound.}}
@@ -1181,17 +1196,20 @@ cross/.default={1pt}}
         our aim is realize the perturbed domain~$\Omega_\beta^\shift$ as the positive superlevel set of a local perturbation of~$\sigma_{\Omega_\beta}$ around each~$z_i$ close to the boundary.
         To this effect, we define, for~$x\in\R^d$, and~$i$ such that~$z_i$ is close to the boundary:
         $$h_{\beta}^{(i),\shift}(x) = \frac{\epsLimit{i} + \shift}{\sqrt\beta} - (x-z_i)^\intercal \hessEigvec{i}{1},$$
-        the signed distance of~$x$ to~$z_i$ in the direction~$\hessEigvec{i}{1}$, offset by $\beta^{\frac12}(\epsLimit{i}+\shift)$,
+        the signed distance of~$x$ to the boundary hyperplane of~$\halfSpace{i}\left(\frac{\epsLimit{i}+\shift}{\sqrt\beta}\right)$,
         and take:
         \begin{equation}
             \label{eq:perturbed_distance_function}
             f^\shift_\beta(x) = \sigma_{\Omega_\beta}(x) + \sum_{\substack{i=0,\dots,m+r\\\alpha_i<+\infty}} \chi_\beta^{(i)}(x)\left(h_{\beta}^{(i),\shift}(x) -\sigma_{\Omega_\beta}(x)\right),
         \end{equation}
-        recalling the definition~\eqref{eq:cutoff}.
-        Let us define the superlevel set:
+        recalling the definition~\eqref{eq:cutoff}. Thus,~$f^\shift_\beta$ is constructed to coincide precisely with~$h_\beta^{(i),\shift}$ in the neighborhood of each~$z_i$.
+
+        By construction,~$f^\shift_\beta$ 
+
+        We then define the perturbed domain as the superlevel set:
         \[\Omega_\beta^\shift = \{x\in\R^d:\,f_\beta^{\shift}(x)>0\}.\]
-        By Assumption~\eqref{eq:supercritical_scaling_delta}, there exists~$\beta_0>0$ such that for all~$\beta>\beta_0$,
-        \[B(z_i,\deltaRadius{i})\cap \Omega_\beta \subseteq\localNeighborhood[+]{i} \subseteq B\left(z_i,\delta^{(i)}(\beta)\right) \cap \left[z_i + \halfSpace{i}\left(\frac{\epsLimit{i}+\shift}{\sqrt\beta}\right)\right].\]
+        By Assumption~\eqref{eq:domain_sandwich_inclusion}, there exists~$\beta_0>0$ such that for all~$\beta>\beta_0$,
+        \[B(z_i,\deltaRadius{i})\cap \Omega_\beta \subseteq\localNeighborhood[+]{i}(\beta) \subseteq B\left(z_i,\delta^{(i)}(\beta)\right) \cap \left[z_i + \halfSpace{i}\left(\frac{\epsLimit{i}+\shift}{\sqrt\beta}\right)\right].\]
         It follows that for all~$x$ in $B(z_i,\deltaRadius{i}(\beta))\cap \Omega_\beta$, $\sigma_{\Omega_\beta}(x) < h_\beta^{(i),\shift}$, and since~$\chi_\beta^{(i)}$ is supported in~$B(z_i,\deltaRadius{i})$,~$f_\beta^\shift \geq \sigma_{\Omega_\beta}$, thus~$\Omega_\beta \subseteq \Omega_\beta^\shift$.
         Furthermore, since the~$\chi_\beta^{(i)}$ have disjoint support for~$\beta$ large enough, and~$\chi_\beta^{(i)} \equiv 1$ on~$B\left(z_i,\frac12\deltaRadius{i}(\beta)\right)$, it follows that~$\Omega_\beta^\shift$ coincides locally with the superlevel set of~$h_\beta^{(i),\shift}$, that is, Equation~\eqref{eq:inclusion_perturbed_domain} holds.
         \todo[inline]{Pour pouvoir faire Courant-Fischer ad infinitum, on veut compacité de la resolvante, donc~$\Omega_\beta^\shift$ de bord Lipschitzien}
@@ -1227,7 +1245,7 @@ cross/.default={1pt}}
         \end{equation}
         where we use the identity~\eqref{eq:enumeration_relations}.
 
-        Furthermore, the~$L^\infty$ bound~\eqref{eq:linf_bound_nabla_chi} implies that~$\||\nabla\eta_\beta^{(i)}|u\|^2 = \mathrm{o}(\beta)\|u\|^2$.
+        Furthermore, the~$L^\infty$ bound~\eqref{eq:linf_bound_nabla_chi} implies that~$\||\nabla\eta_\beta^{(i)}|u\|^2 = \o(\beta)\|u\|^2$.
 
         We are left with the terms
         \[\left\langle H_\beta \eta_\beta^{(m+1)}u,\eta_\beta^{(m+1)}u\right\rangle - \||\nabla \eta_\beta^{(m+1)}|u\|^2.\]
@@ -1244,13 +1262,13 @@ cross/.default={1pt}}
         \[\langle H_\beta \eta_\beta^{(m+1)}u,\eta_\beta^{(m+1)}u\rangle \geq \beta\lambda_{k,\alpha^\shift}^{\mathrm{H}}\|\eta_\beta^{(m+1)}u\|^2.\]
 
         Finally, we note that, owing to the condition~\eqref{eq:partition_of_unity_condition}, and the fact that the~$\eta_\beta^{(i)}$ have disjoint support for~$i=0,\dotsm,m+r$, it also holds:
-       ~$$\||\nabla \eta_\beta^{(m+r+1)}u\|^2 = \mathrm{o}(\beta)\|u\|^2,$$
+       ~$$\||\nabla \eta_\beta^{(m+r+1)}u\|^2 = \o(\beta)\|u\|^2,$$
         and so we have shown:
         \begin{equation}
-            \left\langle H_\beta u,u \right\rangle \geq \beta  \beta\lambda_{k,\alpha^\shift}^{\mathrm H} \sum_{i=0}^{m+r+1}\|\eta_\beta^{(i)}u\|^2 + \mathrm o(\beta)\|u\|^2.
+            \left\langle H_\beta u,u \right\rangle \geq \beta\lambda_{k,\alpha^\shift}^{\mathrm H} \sum_{i=0}^{m+r+1}\|\eta_\beta^{(i)}u\|^2 + \mathrm o(\beta)\|u\|^2.
         \end{equation}
 
-        The lower bound follows easily from:
+        The lower bound follows easily since the~$\eta_\beta^{(i)}$ for a quadratic partition of unity:
        ~$$\|u\|^2 = \sum_{i=0}^{m+r+1} \|\eta_\beta^{(i)}u\|^2,$$
        which implies
        \[\underset{\beta\to\infty}{\underline\lim}\,\beta^{-1}\lambda_{\beta,k}\geq \lambda_{k,\alpha^\shift}^{\mathrm H},\]
@@ -1276,8 +1294,16 @@ cross/.default={1pt}}
         % using again the bound~\eqref{eq:taylor_bound_witten}.
         % Now, since~$u$ is orthogonal to~$\psi_{\beta,j}$ for~$1\leq j \leq n-1$, we have, if~$i \in \{i_1,\leq,i_j\}$, that~$\chi_\beta^{(i)}u$ is orthogonal to~$\psi_{\beta,k_n}^{(i)}$
     \end{proof}
-    \todo[inline]{Remarque: la même preuve marche avec des~$\alpha_i$ potentiellement négatifs / sans restriction sur la nature des points critiques -> vrai, mais pas de practical use en vue}
-    \todo[inline]{Remarque: Il faut quand même faire attention au fait que les estimées~\eqref{eq:loc_eqa},~\eqref{eq:loc_eqb},~\eqref{eq:loc_eqc} décroissent suffisamment rapidement en~$\beta$ / on se retrouve avec une restriction du genre~$\delta_\beta^{(i)} \gg \sqrt{\frac{\log\,\beta}{\beta}}$ (à cause de \eqref{eq:loc_eqc})? Ça impliquerait une restriction sur les domaines admissibles}
+
+    \begin{remark}
+        
+    \end{remark}
+
+    \begin{remark}
+    \end{remark}
+
+    % \todo[inline]{Remarque: la même preuve marche avec des~$\alpha_i$ potentiellement négatifs / sans restriction sur la nature des points critiques -> vrai, mais pas de practical use en vue}
+    % \todo[inline]{Remarque: Il faut quand même faire attention au fait que les estimées~\eqref{eq:loc_eqa},~\eqref{eq:loc_eqb},~\eqref{eq:loc_eqc} décroissent suffisamment rapidement en~$\beta$ / on se retrouve avec une restriction du genre~$\delta_\beta^{(i)} \gg \sqrt{\frac{\log\,\beta}{\beta}}$ (à cause de \eqref{eq:loc_eqc})? Ça impliquerait une restriction sur les domaines admissibles}
     % In the following we collect some basic facts of linear algebra.
     % \begin{lemma}\label{lemma:linalg}
     %     Fix~$\psi_1,\dots,\psi_n\in\mathcal H$ where~$\mathcal H$ is a Hilbert space.
@@ -1287,36 +1313,84 @@ cross/.default={1pt}}
     %     \end{enumerate}
     % \end{lemma}
 
-    \section{Finer asymptotics for the first eigenvalue.}
-        In this section, we analyze the finer behavior of~$\lambda_{\beta,1}$. 
+    \section{An Eyring--Krammers formula for~$\lambda_{1,\beta}$.}
+    \label{sec:ek}
+    We dedicate the study to the derivation of finer asymptotics in the regime~$\beta\to\infty$ for the first Dirichlet eigenvalue of~$-\cL_\beta$,~$\lambda_{\beta,1}$. More precisely, we aim to show the following Eyring--Kramers type formula for~$\lambda_{1,\beta}$:
+    \begin{theorem}
+        \label{thm:eyring_krammers}
+        Assume [...].
 
-        \paragraph{Strategy}
-        \begin{itemize}
-            \item{Using a simple Gaussian quasi-mode supported in a neighborhood of the unique minimum~$z_0$, it is easy to see that 
-           ~$\lambda_{\beta,1} < \e^{-\beta c}$ for some~$c>0$ and~$\beta$ large enough.
-            Thus,
-           ~$\mathrm{Ran}\,\pi_{[0,c/\beta)}=1$ for~$\beta$ small enough. By similar arguments, one shows that~$\mathrm{Ran}\,\pi^{(1)}_{[0,c/\beta)}= m$ (now this is the spectral projector for the Witten Laplacian on 1-forms)} 
-            \item{
-                Next, one constructs a quasi-mode for~$u_{1,\beta}$, the first eigenvector of~$\cL_\beta$. It is defined in the vicinity~$R_\beta^(i)$ of the saddle point,
-                where~$y = \sqrt{\beta}{U^{(i)^\intercal}}(x-z_i)$, by
-               ~$$\widetilde{u}(y) = \frac{\int_{-\delta}^{y_1}\chi(t)\e^{-\beta|\nu_1^{(i)}|t^2/2}\,\d t}{\int_{-\delta}^{\deltai(\beta) }\chi(t)\e^{-\beta|\nu_1^{(i)}|t^2/2}\,\d t},$$
-                where~$\chi$ is an appropriate cutoff function, and defined to be~$1$ inside the well, and properly extended at the boundary.
+        Then the following asymptotic equivalent holds:
+        \begin{equation}
+            \label{eq:eyring_krammers}
+            \lambda_{1,\beta} \widesim{\beta\to+\infty} \frac1{2\pi}\sum_{i\in I_{\min}} \frac{|\hessEigval{i}{1}|}{\Phi\left(|\hessEigval{i}{1}|^{\frac12}\epsLimit{i}\right)}\sqrt{\frac{\det\,\nabla^2 V(z_0)}{\left|\det\,\nabla^2 V(z_i)\right|}}\e^{-\beta\left(V(z_i)-V(z_0)\right),}
+        \end{equation}
+        where~$\Phi$ denotes the standard normal cumulative distribution function, and
+        \begin{equation}
+            I_{\min} = \underset{i=1,\dots,m}{\mathrm{Argmin}}\,V(z_i)
+        \end{equation}
+        is the set of indices correspondint to the order-one saddle points of lowest energy.
+    \end{theorem}
+    As in the proof of the harmonic approximation, the analysis relies on the construction of an accurate approximation of the first Dirichlet eigenvector for~$H_\beta$. 
+    The definition of this quasimode, which is closely related to the one performed in~\cite{LPN21}, relies on a local construction around the order one saddle points of~$V$, which is then extended to an element of~$H_0^1(\Omega_\beta)$.
+    \subsection{Geometric assumptions}
 
-                This is the construction of~\cite{LPN21}, which only requires a slight adaptation here for the critical case.
-                Since these only depend on~$y_1$, they respect the tangential Dirichlet boundary conditions and so can serve as a quasimode on 1-forms.
-            }
-            \item{
-                Passing to the Witten representation, we get a first (upper) estimate for the first eigenvalue using a Laplace method.
-            }
-            \item{Using the form~$H_\beta = d^*d$, one can estimate the singular value of the linear map~$d : \mathrm{Ran}\,\pi_{[0,c/\beta)}\to \mathrm{Ran}\,\pi^{1}_{[0,c/\beta)}$}, which is the square of the smallest eigenvalue. 
-        \end{itemize}
 
-        \subsection{Construction of the quasimode.}
+        % \subsection{Definition of precise quasimodes}
+        
+        % In this section, we analyze the finer behavior of~$\lambda_{\beta,1}$. 
+        % \paragraph{Strategy}
+        % \begin{itemize}
+        %     \item{Using a simple Gaussian quasi-mode supported in a neighborhood of the unique minimum~$z_0$, it is easy to see that 
+        %    ~$\lambda_{\beta,1} < \e^{-\beta c}$ for some~$c>0$ and~$\beta$ large enough.
+        %     Thus,
+        %    ~$\mathrm{Ran}\,\pi_{[0,c/\beta)}=1$ for~$\beta$ small enough. By similar arguments, one shows that~$\mathrm{Ran}\,\pi^{(1)}_{[0,c/\beta)}= m$ (now this is the spectral projector for the Witten Laplacian on 1-forms)} 
+        %     \item{
+        %         Next, one constructs a quasi-mode for~$u_{1,\beta}$, the first eigenvector of~$\cL_\beta$. It is defined in the vicinity~$R_\beta^(i)$ of the saddle point,
+        %         where~$y = \sqrt{\beta}{U^{(i)^\intercal}}(x-z_i)$, by
+        %        ~$$\widetilde{u}(y) = \frac{\int_{-\delta}^{y_1}\chi(t)\e^{-\beta|\nu_1^{(i)}|t^2/2}\,\d t}{\int_{-\delta}^{\deltai(\beta) }\chi(t)\e^{-\beta|\nu_1^{(i)}|t^2/2}\,\d t},$$
+        %         where~$\chi$ is an appropriate cutoff function, and defined to be~$1$ inside the well, and properly extended at the boundary.
 
-        \subsection{Estimate using Laplace method}
+        %         This is the construction of~\cite{LPN21}, which only requires a slight adaptation here for the critical case.
+        %         Since these only depend on~$y_1$, they respect the tangential Dirichlet boundary conditions and so can serve as a quasimode on 1-forms.
+        %     }
+        %     \item{
+        %         Passing to the Witten representation, we get a first (upper) estimate for the first eigenvalue using a Laplace method.
+        %     }
+        %     \item{Using the form~$H_\beta = d^*d$, one can estimate the singular value of the linear map~$d : \mathrm{Ran}\,\pi_{[0,c/\beta)}\to \mathrm{Ran}\,\pi^{1}_{[0,c/\beta)}$}, which is the square of the smallest eigenvalue. 
+        % \end{itemize}
 
-        \subsection{Estimation of the singular values}
+        \subsection{Local construction around order-one saddle points}
+            Let us fix a parameter~$\shift>0$, and let~$i \in \{1,\dots,m\}$.
+            It is convenient to introduce the following neihborhoods, which are similarly defined similarly to the capped balls~\eqref{eq:capped_balls} described in Section~\ref{subsect:harm_hypotheses}, but in some other norm whose balls are rotated cuboids:
+            \begin{equation}
+                \label{eq:capped_cuboid}
+               \localCuboid{i}(\beta) =  z_i + \hessPassage[]{i} \left[\left(-\infty,\frac{\epsLimit{i}}{\sqrt\beta}-\gammaPerturbation{i}(\beta)\right) \cap \left(-C_d\deltaRadius{i}(\beta),C_d\deltaRadius{i}(\beta)\right)^d\right]
+            \end{equation}
+            where~$C_d>0$ is a constant depending only on the dimension ensuring that~$\localCuboid{i}(\beta)\subseteq \localNeighborhood[-]{i}(\beta)$ whenever~\ref{eq:domain_sandwich_inclusion} is satisfied.
 
+            We then define the following function:
+            \begin{equation}
+                \varphi_\beta^{(i)}(x) = \frac{\displaystyle\int_{(x-z_i)^\intercal \hessEigvec{i}{1}}^{+\infty}\e^{-\beta \frac{|\hessEigval{i}{1}|}{2}t^2} \fineCutoff{i}(t)\,\d t}{\displaystyle\int_{-\infty}^{+\infty} \e^{-\beta\frac{|\hessEigval{i}{1}|}{2}t^2} \fineCutoff{i}(t)\,\d t},
+            \end{equation}
+
+            \todo[inline]{Motivation: formellement, avec un potentiel~$\frac12(x_2^2-x_1^2)$, $\xi \equiv 1$, $-\cL_\beta \varphi_\beta = 0$}
+            where~$\fineCutoff{i}: \R\to \R$ is a $\mathcal C_c^\infty$ cutoff function chosen such that:
+            
+            \begin{equation}
+                \supp\,\fineCutoff{i} \subset \left(-\infty,\frac{\epsLimit{i}}{\sqrt\beta}-\gammaPerturbation{i}(\beta)\right)\cap \left(-C_d\deltaRadius{i}(\beta),C_d\deltaRadius{i}(\beta)\right),
+            \end{equation}
+
+            \begin{equation}
+                \fineCutoff{i} \equiv 1\text{ in }\left(-\infty,\frac{\epsLimit{i}}{\sqrt\beta}-2\gammaPerturbation{i}(\beta)\right)\cap \left(\frac{-C_d}2\deltaRadius{i}(\beta),\frac{C_d}2\deltaRadius{i}(\beta)\right).
+            \end{equation}
+            
+        \subsection{}
+
+
+        \section{Application to domain optimization}
+        \label{sec:parrep}
+        In this Section, we describe how to use the analysis performed in Sections~\ref{sec:harm} and~\ref{sec:ek}
     \section{Tools}
     % In this section we collect various definitions and lemmata.
 
@@ -1478,7 +1552,7 @@ cross/.default={1pt}}
         Then, the following asymptotic equivalent holds:
         \begin{equation}
             \label{eq:laplace_method}
-            I_\lambda \underset{\lambda\to\infty}{\sim} \e^{-\lambda f(x_0)}g(x_0)\left(\frac{2\pi}{\lambda}\right)^{\frac d2}\left|\det\,\nabla^2 f(x_0)\right|^{-\frac12}\,\mathbb{P}\left(\xi \in A_\infty\right),\quad\,{\xi\sim \mathcal N\left(0,\nabla^2 f(x_0)^{-1}\right)}
+            I_\lambda \widesim{\lambda\to\infty} \e^{-\lambda f(x_0)}g(x_0)\left(\frac{2\pi}{\lambda}\right)^{\frac d2}\left|\det\,\nabla^2 f(x_0)\right|^{-\frac12}\,\mathbb{P}\left(\xi \in A_\infty\right),\quad\,{\xi\sim \mathcal N\left(0,\nabla^2 f(x_0)^{-1}\right)}
         \end{equation}
     \end{lemma}
     \todo[inline]{hypothese ou argument supplementaire car~$f(x)\to f(x_0)$ peut-être pb quand~$x\to\infty$}
