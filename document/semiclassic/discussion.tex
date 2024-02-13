@@ -24,6 +24,7 @@
 \usepackage{nccmath}
 \usepackage{mathtools}
 % \usepackage{ntheorem}
+\usepackage{relsize}
 \usepackage{todonotes}
 
 %% custom commands
@@ -101,8 +102,8 @@
 
 \newcommand{\bassin}[1][]{\mathrm{B}^{#1}}
 
-\renewcommand{\o}{\mathrm{o}}
 \renewcommand{\O}{\mathcal{O}}
+\renewcommand{\o}{\mathrm{o}}
 \newtheorem{lemma}{Lemma}
 \newtheorem{conjecture}{Conjecture}
 \newtheorem{theorem}{Theorem}
@@ -121,8 +122,32 @@
 %default radius will be 1pt. 
 cross/.default={1pt}}
 
+
+
+% %%%%% TODO
+% - Clarifier les hypothèses de scaling "gratuites" dans un lemme
+% - Retirer les \epsLimit{i}, ils ne servent à rien à part dans la définition des \alpha_i
+% - Retirer la dépendance en {i} de \deltaRadius{} et \gammaPerturbation{}
+% - Faire argument perturbation du domaine avec Sard, 
+% - Faire des dessins au niveau des constructions (perturbation du domaine) + quasimodes au niveau des points selles
+% - Calculer erreur asymptotique dans Laplace critique (en \O(\beta) a priori)
+% - Conclure la preuve du théorème 2
+% - Reformuler les estimations de queues gaussiennes avec des \O plutot que des constantes, absorber les termes polynomiaux dans les constantes
+% - Quantifier l'erreur commise dans le Théorème 1 -- peut-on passer par les \gammaPerturbation{} plutôt que de fixer un seuil~\rho?
+% - A minima, faire une remarque sur le caractère qualitatif de ce résultat (numériquement, la convergence est dailleurs très lente)
+% - Rédiger reflexion sur l'optimisation locale du domaine autour des points selles
+% - Rédiger introduction et faire un paysage des approches spectrales pour la métastabilité
+%     - Approches historiques: barrières énergitiques -- domaine fixe, opérateur variable (CFKS, Bovier-Eckhoff, Helffer-Sjostrand, Helffer-Nier, Michel, Lelièvre-Nier, Bouchet-Reygner, -Di Gesu-Lelièvre Le Pleutrec Nectoux ...)
+%     - Approches futures (barrières entropiques -- opérateur fixe, domaine variable) (Lelièvre-Stoltz-Rachid, Felli-Norris-Ognibene)
+%     - Sensitivity analysis/optimisation -- opérateur et domaines variables
+% - Réflechir à la généricité de nos hypothèses géométriques
+% - Virer les \overset{...}{\longrightarrow} et mettre des \xrightarrow{...}
+%%%%%%%%%
+
 \begin{document}
 \maketitle
+
+
 
     % \section{The problem}
     %     We consider~$\Omega\subset \R^d$ an open bounded domain with smooth boundary,~$V\in \mathcal C^\infty (\overline \Omega)$, and~$\beta>0$.
@@ -301,7 +326,7 @@ cross/.default={1pt}}
         \label{eq:sobolev_spaces}
         L_\mu^2(\Omega) = \left\{u:\,\int_{\Omega} u^2 \,d\mu < +\infty\right\},\qquad H^{k}_\mu(\Omega) = \{u\in L^2_\mu(\Omega):\,\partial^{\alpha}u\in L^2_\mu(\Omega),\,\forall\, |\alpha|\leq k\},
     \end{equation}
-    where~$\partial^\alpha$ denotes the weak differentation operator associated to a multi-index~$\alpha$. Finally let~$H_{0,\mu}^k(\Omega)$ denote the~$H^k(\Omega)$ norm-closure of~$\mathcal C^\infty_c(\Omega)$.
+    where~$\partial^\alpha$ denotes the weak differentation operator associated to a multi-index~$\alpha$. As in the flat case, we let~$H_{0,\mu}^k(\Omega)$ denote the~$H_\mu^k(\Omega)$ norm-closure of~$\mathcal C^\infty_c(\Omega)$.
 
     The infinitesimal generator for the dynamics is defined by the differential operator:
     \begin{equation}
@@ -318,12 +343,12 @@ cross/.default={1pt}}
    ~$$0<\lambda_{1,\beta} \leq \lambda_{2,\beta}\leq \dotsm \leq\lambda_{N,\beta} \underset{N\to\infty}{\longrightarrow}+\infty.$$
     Furthermore, since~$\Omega_\beta$ is bounded for all~$\beta$, one can show that the first eigenvalue is simple and strictly positive, so that~$0<\lambda_{1,\beta} < \lambda_{2,\beta}$, with~$\dim \ker \left(\cL_\beta+\lambda_{1,\beta}\right)=1$.
 
-    In fact, it will be more convenient to study the spectrum of the Dirichlet realization of another operator, the Witten Laplacian:
+    In fact, it will sometimes be more convenient to study the spectrum of the Dirichlet realization of an equivalent Schrödinger-like operator:
     \begin{equation}
         \label{eq:witten_laplacian}
         H_{\beta} = U_\beta - \Delta,\qquad U_\beta = \frac{\beta^2}4|\nabla V|^2 - \frac{\beta}2 \Delta V,
     \end{equation}
-    with domains~$D(H_\beta)=H_0^1\cap H^2(\Omega_\beta) \subset L^2(\Omega_\beta)$. A straightforward computation indeed shows that~$\frac1{\beta}H_\beta$ is the conjugate of~$-\cL_\beta$ under the unitary transformation~$u\mapsto \e^{-\frac{\beta V}2}u$ from~$L_\mu^2(\Omega_\beta)$ to~$L^2(\Omega_\beta)$, so that~$H_\beta$ also has pure point spectrum, and the~$k$-th eigenvalue of~$H_\beta$, counted with multiplicity, is given by~$\beta\lambda_{k,\beta}$.
+    with domains~$D(H_\beta)=H_0^1\cap H^2(\Omega_\beta) \subset L^2(\Omega_\beta)$. A straightforward computation shows that~$\frac1{\beta}H_\beta$ is the conjugate of~$-\cL_\beta$ under the unitary transformation~$u\mapsto \e^{-\frac{\beta V}2}u$ from~$L_\mu^2(\Omega_\beta)$ to~$L^2(\Omega_\beta)$, so that~$H_\beta$ also has pure point spectrum, and the~$k$-th eigenvalue of~$H_\beta$, counted with multiplicity, is given by~$\beta\lambda_{k,\beta}$.
 
     Moreover, we note that~$H_\beta$ may be written as
     \begin{equation}
@@ -341,17 +366,17 @@ cross/.default={1pt}}
         d_{\beta,V}^\dagger \Theta = -\div\, \Theta +\frac\beta 2 \nabla V \cdot \Theta.
     \end{equation}
 
-    We denote by
+    It will be convenient to use the quadratic form associated with~$H_\beta$:
     \begin{equation}
         \label{eq:witten_quad_form}
-        Q_\beta(u) = \langle U_\beta u ,u \rangle + \|\nabla u\|^2
+        Q_\beta(u) = \langle U_\beta u ,u \rangle + \|\nabla u\|^2,
     \end{equation}
-    the quadratic form associated with the Witten Laplacian, with domain~$H_0^1(\Omega_\beta)$.
+    with form domains~$H_0^1(\Omega_\beta)$.
 
     We use the following notation for the spectrum of~$\nabla^2 V$ at each critical point~$z_i$:
     \[\sigma(\Hess V(z_i)) = \{\hessEigval{i}{1} \leq \hessEigval{i}{2} \leq \dotsm \leq \hessEigval{i}{d}\}\]
     denote the eigenvalues of~$\Hess V$ at~$z_i$, with associated orthonormal eigenbasis:
-    \[U^{(i)} =\begin{pmatrix}\hessEigvec{i}{1}&\dotsm&\hessEigvec{i}{d}\end{pmatrix},\quad U^{(i)\intercal},\]
+    \[U^{(i)} =\begin{pmatrix}\hessEigvec{i}{1}&\dotsm&\hessEigvec{i}{d}\end{pmatrix},\]
     which induce unitary transformations in $L^2$, via:
    ~\begin{equation}
     \label{eq:}
@@ -518,7 +543,7 @@ cross/.default={1pt}}
         \end{equation}
     \end{hypothesis}
     We stress that~\eqref{eq:scaling_deltai}, together with the hypothesis~\eqref{eq:deltai_polybound_far}, forces critical points which are far from~$\partial \Omega_\beta$ to be sufficiently far relatively to~$\sqrt\beta$, namely further than~$\sqrt{\log \beta}$ in this scaling. Slower rates of divergence lie outside the scope of our analysis.
-    \todo[inline]{En fait je pense qu'on peut dans un deuxième temps traiter aussi le cas~$ \beta^{-\frac12} \ll \epsBoundary{i}(\beta) \ll \sqrt{\frac{\log\beta}{\beta}}$, par un argument de monotonie de domaine}
+    % \todo[inline]{En fait je pense qu'on peut dans un deuxième temps traiter aussi le cas~$ \beta^{-\frac12} \ll \epsBoundary{i}(\beta) \ll \sqrt{\frac{\log\beta}{\beta}}$, par un argument de monotonie de domaine}
     
     \begin{figure}
         \label{fig:Vi_schematic}
@@ -1074,7 +1099,7 @@ cross/.default={1pt}}
         There exists~$C>0$ and~$\beta_0>0$ such that, for all~$\beta>\beta_0$, the following estimate holds:
         \begin{equation}
             \label{eq:taylor_bound_witten}
-            \|(H_\beta-H_\beta^{(i)})\chi_\beta^{(i)} u\| \leq C\beta^{3\scalingExp+\frac12}\|\chi_\beta^{(i)}u\| = \mathrm{o(\beta)}\|\chi_\beta^{(i)}u\|.
+            \|(H_\beta-H_\beta^{(i)})\chi_\beta^{(i)} u\| \leq C\beta^{3\scalingExp+\frac12}\|\chi_\beta^{(i)}u\| = \o(\beta)\|\chi_\beta^{(i)}u\|.
         \end{equation}
     \end{lemma}
     \begin{proof}
@@ -1212,7 +1237,7 @@ cross/.default={1pt}}
         \[B(z_i,\deltaRadius{i})\cap \Omega_\beta \subseteq\localNeighborhood[+]{i}(\beta) \subseteq B\left(z_i,\delta^{(i)}(\beta)\right) \cap \left[z_i + \halfSpace{i}\left(\frac{\epsLimit{i}+\shift}{\sqrt\beta}\right)\right].\]
         It follows that for all~$x$ in $B(z_i,\deltaRadius{i}(\beta))\cap \Omega_\beta$, $\sigma_{\Omega_\beta}(x) < h_\beta^{(i),\shift}$, and since~$\chi_\beta^{(i)}$ is supported in~$B(z_i,\deltaRadius{i})$,~$f_\beta^\shift \geq \sigma_{\Omega_\beta}$, thus~$\Omega_\beta \subseteq \Omega_\beta^\shift$.
         Furthermore, since the~$\chi_\beta^{(i)}$ have disjoint support for~$\beta$ large enough, and~$\chi_\beta^{(i)} \equiv 1$ on~$B\left(z_i,\frac12\deltaRadius{i}(\beta)\right)$, it follows that~$\Omega_\beta^\shift$ coincides locally with the superlevel set of~$h_\beta^{(i),\shift}$, that is, Equation~\eqref{eq:inclusion_perturbed_domain} holds.
-        \todo[inline]{Pour pouvoir faire Courant-Fischer ad infinitum, on veut compacité de la resolvante, donc~$\Omega_\beta^\shift$ de bord Lipschitzien}
+        \todo[inline]{Pour pouvoir faire Courant-Fischer ad infinitum, on veut compacité de la resolvante, donc~$\Omega_\beta^\shift$ de bord Lipschitzien -> argument avec Sard}
         \todo[inline]{Dessin!}
 
         {\underline{\bf Step 2b: Energy lower bound.}\newline}
@@ -1313,16 +1338,16 @@ cross/.default={1pt}}
     %     \end{enumerate}
     % \end{lemma}
 
-    \section{An Eyring--Krammers formula for~$\lambda_{1,\beta}$.}
+    \section{An Eyring--Kramers formula for~$\lambda_{1,\beta}$.}
     \label{sec:ek}
-    We dedicate the study to the derivation of finer asymptotics in the regime~$\beta\to\infty$ for the first Dirichlet eigenvalue of~$-\cL_\beta$,~$\lambda_{\beta,1}$. More precisely, we aim to show the following Eyring--Kramers type formula for~$\lambda_{1,\beta}$:
+    We dedicate this section to the derivation of finer asymptotics for the first Dirichlet eigenvalue of~$-\cL_\beta$,~$\lambda_{\beta,1}$ in the regime~$\beta\to\infty$. More precisely, we aim to show the following Eyring--Kramers type formula for~$\lambda_{1,\beta}$, which generalizes well-known formul\ae~in the presence of saddle points which are close to the boundary:
     \begin{theorem}
-        \label{thm:eyring_krammers}
-        Assume [...].
+        \label{thm:eyring_kramers}
+        Assume [Single well assumption + scaling constraints ...].
 
         Then the following asymptotic equivalent holds:
         \begin{equation}
-            \label{eq:eyring_krammers}
+            \label{eq:eyring_kramers}
             \lambda_{1,\beta} \widesim{\beta\to+\infty} \frac1{2\pi}\sum_{i\in I_{\min}} \frac{|\hessEigval{i}{1}|}{\Phi\left(|\hessEigval{i}{1}|^{\frac12}\epsLimit{i}\right)}\sqrt{\frac{\det\,\nabla^2 V(z_0)}{\left|\det\,\nabla^2 V(z_i)\right|}}\e^{-\beta\left(V(z_i)-V(z_0)\right),}
         \end{equation}
         where~$\Phi$ denotes the standard normal cumulative distribution function, and
@@ -1331,11 +1356,11 @@ cross/.default={1pt}}
         \end{equation}
         is the set of indices correspondint to the order-one saddle points of lowest energy.
     \end{theorem}
-    As in the proof of the harmonic approximation, the analysis relies on the construction of an accurate approximation of the first Dirichlet eigenvector for~$H_\beta$. 
-    The definition of this quasimode, which is closely related to the one performed in~\cite{LPN21}, relies on a local construction around the order one saddle points of~$V$, which is then extended to an element of~$H_0^1(\Omega_\beta)$.
+
+    The proof of~\eqref{eq:eyring_kramers} on the construction of an accurate approximation of the first Dirichlet eigenvector for~$-\cL_\beta$, which is closely related to the one performed in~\cite{LPN21}, in the special case of saddle points lying on the boundary of a static domain.
+    More precisely a local ansatz is defined in the neighborhood of each of the low-energy saddle points of~$V$, and it is then extended to an element of~$H_{0,\mu}^1(\Omega_\beta)$, the form domain of~$-\cL_\beta$.
     \subsection{Geometric assumptions}
-
-
+        
         % \subsection{Definition of precise quasimodes}
         
         % In this section, we analyze the finer behavior of~$\lambda_{\beta,1}$. 
@@ -1360,7 +1385,7 @@ cross/.default={1pt}}
         %     \item{Using the form~$H_\beta = d^*d$, one can estimate the singular value of the linear map~$d : \mathrm{Ran}\,\pi_{[0,c/\beta)}\to \mathrm{Ran}\,\pi^{1}_{[0,c/\beta)}$}, which is the square of the smallest eigenvalue. 
         % \end{itemize}
 
-        \subsection{Local construction around order-one saddle points}
+        \subsection{Construction of a precise quasimode}
             Let us fix a parameter~$\shift>0$, and let~$i \in \{1,\dots,m\}$.
             It is convenient to introduce the following neihborhoods, which are similarly defined similarly to the capped balls~\eqref{eq:capped_balls} described in Section~\ref{subsect:harm_hypotheses}, but in some other norm whose balls are rotated cuboids:
             \begin{equation}
@@ -1371,10 +1396,11 @@ cross/.default={1pt}}
 
             We then define the following function:
             \begin{equation}
+                \label{eq:local_quasimode}
                 \varphi_\beta^{(i)}(x) = \frac{\displaystyle\int_{(x-z_i)^\intercal \hessEigvec{i}{1}}^{+\infty}\e^{-\beta \frac{|\hessEigval{i}{1}|}{2}t^2} \fineCutoff{i}(t)\,\d t}{\displaystyle\int_{-\infty}^{+\infty} \e^{-\beta\frac{|\hessEigval{i}{1}|}{2}t^2} \fineCutoff{i}(t)\,\d t},
             \end{equation}
 
-            \todo[inline]{Motivation: formellement, avec un potentiel~$\frac12(x_2^2-x_1^2)$, $\xi \equiv 1$, $-\cL_\beta \varphi_\beta = 0$}
+            \todo[inline]{Motivation:, avec un potentiel en selle de cheval: ~$\frac12(x_2^2-x_1^2)$, $-\cL_\beta \varphi_\beta = 0$ (localement au voisinage de 0)}
             where~$\fineCutoff{i}: \R\to \R$ is a $\mathcal C_c^\infty$ cutoff function chosen such that:
             
             \begin{equation}
@@ -1385,8 +1411,149 @@ cross/.default={1pt}}
                 \fineCutoff{i} \equiv 1\text{ in }\left(-\infty,\frac{\epsLimit{i}}{\sqrt\beta}-2\gammaPerturbation{i}(\beta)\right)\cap \left(\frac{-C_d}2\deltaRadius{i}(\beta),\frac{C_d}2\deltaRadius{i}(\beta)\right).
             \end{equation}
             
+            \begin{equation}
+                \label{eq:global_quasimode}
+                \psi_\beta = \frac1{Z_\beta} \left[\eta_\beta + \sum_{i\in I_{\min}} \varphi_\beta^{(i)}\localCutoff{i}\right],
+            \end{equation}
+            where~$Z_\beta$ is a normalizing constant imposing~$\|\psi_\beta\|_{L_\mu^2(\Omega_\beta)}=1$.
+
         \subsection{}
 
+        \begin{proposition}[Critical Laplace asymptotics]
+            For~$i=1,\dots,m$, the following hold:
+
+            \begin{equation}
+                \label{eq:laplace_a}
+                Z_\beta = \e^{-\frac{\beta}2 V(z_0)} \left(\frac{2\pi}{\beta}\right)^{\frac d4}|\det \nabla^2 V(z_0)|^{-\frac14}\left(1+\O()\right).
+            \end{equation}
+            \begin{equation}
+                \label{eq:laplace_b}
+                \left\||\nabla \psi_\beta|\right\|^2_{L_\mu^2(\localCuboid{i}(\beta))} = \frac{|\hessEigval{i}{1}|}{2\pi\Phi\left(|\hessEigval{i}{1}|^{\frac12}\epsLimit{i}\right)}\sqrt{\frac{\det \nabla^2 V(z_0)}{\left|\det \nabla ^2 V(z_i)\right|}} \e^{-\beta(V(z_i)-V(z_0))} \left(1 +\O()\right),
+            \end{equation}
+
+            \begin{equation}
+                \label{eq:laplace_c}
+                \|\cL_\beta \psi_\beta\|^2_{L^2_\mu(\localCuboid{i}(\beta))} = \O()\left\||\nabla\psi_\beta|\right\|^2_{L^2_\mu(\localCuboid{i}(\beta))}
+            \end{equation}
+
+
+            There exists~$c>0$ and~$\beta_0$ such that for all~$\beta>\beta_0$:
+            \begin{equation}
+                \label{eq:laplace_d}
+                \left\||\nabla\psi_\beta|\right\|^2_{L_\mu^2(\Omega_\beta \setminus \bigcup_{i\in I_{\min}}\localCuboid{i}(\beta))} = \O\left(\frac1{\deltaRadius{i}(\beta)^2} \e^{-\beta(V(z_i)-V(z_0)+c\deltaRadius{i}(\beta)^2)}\right)
+            \end{equation}
+
+        \end{proposition}
+        \begin{proof}
+            The usual Laplace method yields~\eqref{eq:laplace_a}.
+            \todo[inline]{à préciser}
+            Let us fix~$i=1,\dots,m$, and for convenience, we use a set of coordinates adapted to the Hessian of~$V$ at $z_i$:
+            \[y = \hessPassage[\intercal]{i}(x-z_i),\]
+            which ensures, that, on~$B(z_i,\deltaRadius{i}(\beta))$, we have, in the~$y$ coordinates:
+            \begin{equation}
+                \label{eq:lemma_laplace_saddle_expansion}
+                V(y) =\left[\frac12\sum_{j=1}^d \hessEigval{i}{j}y_j^2\right]\left(1+\O(\deltaRadius{i}(\beta))\right).
+            \end{equation}
+            Besides, since:
+            \begin{equation}
+                \label{eq:lemma_laplace_tmp}
+            \int_{-\infty}^{\frac{\epsLimit{i}}{\sqrt\beta}-2\gammaPerturbation{i}(\beta)}\e^{-\beta \frac{|\hessEigval{i}{1}|}{2}t^2}\,\d t\leq \int_{-\infty}^\infty \e^{-\beta \frac{|\hessEigval{i}{1}|}{2}t^2} \fineCutoff{i}(t)\,\d t \leq \int_{-\infty}^{\frac{\epsLimit{i}}{\sqrt\beta}-\gammaPerturbation{i}(\beta)} \e^{-\beta \frac{|\hessEigval{i}{1}|}{2}t^2}\,\d t,
+            \end{equation}
+            we get, using the one-dimensional case of Lemma~\ref{lemma:laplace} and Assumption~\eqref{eq:scaling_deltai}, that:
+            \begin{equation}
+                \label{eq:lemma_laplace_d_beta_estimation}
+                C_\beta = \int_{-\infty}^\infty \e^{-\beta \frac{|\hessEigval{i}{1}|}{2}t^2} \fineCutoff{i}(t)\,\d t = \sqrt{\frac{2\pi}{\beta|\hessEigval{i}{1}|}}\Phi(|\hessEigval{i}{1}|\epsLimit{i})\left(1+\O()\right).
+            \end{equation}
+
+            Furthermore, we may write in the~$y$-coordinates:
+            \[\nabla \varphi_\beta^{(i)}(y) = -C_\beta^{-1}\e^{-\frac{\beta}2|\hessEigval{i}{1}|y_1^2}\fineCutoff{i}(y_1)\hessEigvec{i}{1},\]
+            whence
+            \[|\nabla\varphi_\beta^{(i)}|^2\e^{-\beta V}(y) = C_\beta^{-2}\e^{-\beta\left(|\hessEigval{i}{1}|y_1^2+ V(y)\right)}\fineCutoff{i}(y_1)^2.\]
+            The estimation~\eqref{eq:lemma_laplace_saddle_expansion} implies that~$W(y)=|\hessEigval{i}{1}|y_1^2+ V(y)$ has a strict minimum at~$y=0$, with~$\nabla_y^2 W(0) = \mathrm{diag}\left(|\hessEigval{i}{1}|,\dots, \hessEigval{i}{d}\right)$, and this minimum is unique in~$\localCuboid{i}(\beta)$.
+
+            Hence, using identical bounds on~$\fineCutoff{i}\,^2$ as the ones leading to~\eqref{eq:lemma_laplace_tmp}, we get, by the~$d$-dimensional case of Lemma~\ref{lemma:laplace} and the convergence of~$\sqrt\beta\localCuboid{i}(\beta)$ to the half-space~$\halfSpace{i}(\epsLimit{i})$ under Assumption~\eqref{eq:scaling_deltai}, by going back to~$x$ coordinates:
+            \[\left\||\nabla \psi_\beta|\right\|^2_{L_\mu^2(\localCuboid{i}(\beta))} = Z_\beta^{-2}C_\beta^{-2}\e^{-\beta V(z_i)}\left(\frac{2\pi}{\beta}\right)^{\frac d2}|\det \nabla^2 W(z_i)|^{-\frac12}\P(\xi\in \halfSpace{i}(\epsLimit{i}))(1+\O()),\]
+            where~$\xi\sim\mathcal N(0,\nabla^2 W(z_i)^{-1})$. We then note:
+            \[\P(\xi\in \halfSpace{i}(\epsLimit{i})) = \Phi(|\hessEigval{i}{1}|\epsLimit{i}),\]
+            \[|\det \nabla^2 W(z_i)|=|\det\nabla^2 V(z_i)|,\]
+            and combine the asymptotic equivalents~\eqref{eq:laplace_a},~\eqref{eq:lemma_laplace_d_beta_estimation} to obtain~\eqref{eq:laplace_b}.
+
+            To show~\eqref{eq:laplace_c}, we write, for all~$x \in \mathcal R_i$, in the~$y$-coordinates:
+
+            \begin{align*}
+                \cL_\beta\psi_\beta(y) &= \frac1{C_\beta Z_\beta}\left(-\nabla V \cdot \nabla \varphi_\beta^{(i)} + \frac1\beta\Delta\varphi_\beta^{(i)}\right)(y)\\
+                &= \frac1{Z_\beta C_\beta}\left(\frac{\partial V}{\partial y_1}(y)\fineCutoff{i}(y_1) + \left[\frac{\xi_\beta^{(i)\prime}(y_1)}{\beta}- |\hessEigval{i}{1}|y_1\fineCutoff{i}(y_1)\right]\right)\e^{-\beta\frac{|\hessEigval{i}{1}|}{2}y_1^2}\\
+                &= \frac1{Z_\beta C_\beta}\left(\O(|y|) + \O\left(\beta^{-1}\|\xi_\beta^{(i)\prime}\|_\infty\right)\right)\e^{-\beta\frac{|\hessEigval{i}{1}|}{2}y_1^2},
+            \end{align*}
+            using a first-order Taylor expansion of~$\frac{\partial V}{\partial y_1}$ around~$y=0$ in the last line. Now, estimating the~$L^2_\mu(\localCuboid{i}(\beta))$-norm yields, using~$|y| = \O\left(\deltaRadius{i}(\beta)\right)$ in~$\localCuboid{i}$,~$\|\xi_\beta^{(i)\prime}\|_\infty = \O(1/\gammaPerturbation{i}(\beta))$:
+            \begin{align*}
+                \|\cL_\beta \psi_\beta\|^2_{L^2_\mu(\localCuboid{i}(\beta))} &= \frac1{Z_\beta C_\beta}\O\left(\deltaRadius{i}(\beta)^2 \lor \beta^{-2}\gammaPerturbation{i}(\beta)^{-2}\right) \int_{y^{-1}(\localCuboid{i}(\beta))}\e^{-\beta|\hessEigval{i}{1}|y_1^2}\e^{-\beta V(y)}\,\d y\\
+                &= \O\left(\deltaRadius{i}(\beta)^2 \lor \beta^{-2}\gammaPerturbation{i}(\beta)^{-2}\right) \left\||\nabla \psi_\beta|\right\|^2_{L_\mu^2(\localCuboid{i}(\beta))}
+            \end{align*} 
+            \todo[inline]{Construire~$\eta_\beta$ tq le support de $\nabla \eta_\beta$ se concentre sur une zone de haute énergie (hypothèse nécessaire sur le domaine)}
+        \end{proof}
+
+        \begin{lemma}[Resolvent estimate]
+            Let~$u\in H_{0,\mu}^1(\Omega_\beta)\cap H^2_\mu(\Omega_\beta) = \mathcal D(\cL_\beta)$. Then the following holds:
+            \begin{equation}
+                \label{eq:lemma_resolvent_eqa}
+                \|(1-\pi_{\lambda_{1,\beta}})u\|_{L^2_\mu(\Omega_\beta)} = \O(\|\cL_\beta u\|_{L^2_\mu(\Omega_\beta)}).
+            \end{equation}
+            \begin{equation}
+                \label{eq:lemma_resolvent_eqb}
+                \left\||\nabla \pi_{\lambda_{1,\beta}} u|\right\|_{L^2_\mu(\Omega_\beta)}^2 = \left\||\nabla u|\right\|_{ L^2_\mu(\Omega_\beta)}^2 + \O\left(\|\cL_\beta u\|_{L^2_\mu(\Omega_\beta)}^2\right).
+            \end{equation}
+        \end{lemma}
+        \begin{proof}
+            The estimates~\eqref{eq:lemma_resolvent_eqa} and~\eqref{eq:lemma_resolvent_eqb} are standard in the semiclassical analysis of the Witten Laplacian, see for instance~\cite[Proposition 27]{LPN21}. 
+            We include its proof (in the equivalent weighted~$L^2$ setting) for the sake of completeness.
+            Since~$\lambda_{2}^{\mathrm H}>0$ by Assumption (one-well, minimum far from boundary), Theorem~\ref{thm:harm_approx} implies that there exists~$r,\beta_0>0$ such that for all~$\beta>\beta_0$:
+            \[|\lambda_{1,\beta}| <r,\quad \lambda_{2,\beta}>3r,\]
+            so that the circular contour~$\Gamma_{2r} = \{2r\e^{2i\pi t}, 0\leq t \leq 1\}$ is at distance at least~$r$ from~$\sigma(-\cL_\beta)$.
+            A standard corollary of the spectral theorem yields the following uniform resolvent estimate:
+            \[\|(-\cL_\beta-z)^{-1}\|_{L^\infty\left(\Gamma_{2r};\mathcal B(L^2_\mu(\Omega_\beta))\right)} \leq \frac 1r.\]
+            Furthermore, the spectral projector~$\pi_{\lambda_{1,\beta}}$ onto~$\ker(-\cL_\beta-\lambda_{1,\beta})$ may be expressed using the following contour integral:
+            \begin{equation}
+                \frac{1}{2i\pi}\oint_{\Gamma_{2r}}(\cL_\beta+z)^{-1}\,\d z,
+            \end{equation}
+            whereby, using the residue theorem once again:
+            \begin{align*}
+                (1-\pi_{\lambda_{1,\beta}})u &= \frac{1}{2i\pi}\oint_{\Gamma_{2r}} \left[z^{-1}-(\cL_\beta+z)^{-1}\right]u\,\d z\\
+                &= \left(\frac{1}{2i\pi}\oint_{\Gamma_{2r}}z^{-1}(\cL_\beta+z)^{-1}\,\d z\right)\cL_\beta u.
+            \end{align*}
+            Estimating the~$L^2_\mu$ norm then yields~\eqref{eq:lemma_resolvent_eqa}:
+            \[\|(1-\pi_{\lambda_{1,\beta}})u\|_{L^2_\mu(\Omega_\beta)} \leq \frac1r\|\cL_\beta u\|_{L^2_\mu(\Omega_\beta)}.
+                \]
+
+            For~\eqref{eq:lemma_resolvent_eqb}, we use the commutativity~$\pi_{\lambda_{1,\beta}}\cL_\beta\pi_{\lambda_{1,\beta}} = \pi_{\lambda_{1,\beta}}\cL_\beta$ to write:
+            \begin{align*}
+                \left\||\nabla \pi_{\lambda_{\beta,1}}u|\right\|^2_{L^2_\mu(\Omega_\beta)} &= \left\langle \pi_{\lambda_{\beta,1}}u , \cL_\beta \pi_{\lambda_{\beta,1}}u\right\rangle_{L^2_\mu(\Omega_\beta)}\\
+                &= \left\langle \pi_{\lambda_{\beta,1}}u,\cL_\beta u\right\rangle_{L^2_\mu(\Omega_\beta)}\\
+                &=\left\langle u,\cL_\beta u\right\rangle_{L^2_\mu(\Omega_\beta)} + \left\langle (\pi_{\lambda_{\beta,1}}-1)u,\cL_\beta u\right\rangle_{L^2_\mu(\Omega_\beta)}\\
+                &= \left\||\nabla u|\right\|_{L^2_\mu(\Omega_\beta)}^2 + \O(\|\cL_\beta u\|_{L^2_\mu(\Omega_\beta)}^2),
+            \end{align*}
+            where we used a Cauchy--Schwarz inequality and~\eqref{eq:lemma_resolvent_eqa} to obtain the last equality.
+        \end{proof}
+        We are now in a position to prove the critical Eyring--Kramers formula.
+        \begin{proof}[Proof of Theorem~\ref{thm:eyring_kramers}]
+            We write, using~\eqref{eq:lemma_resolvent_eqb}:
+            \begin{align*}
+                \lambda_{1,\beta} &= \frac{\left\||\nabla \pi_{\lambda_{1,\beta}}\psi_\beta|\right\|^2_{L^2_\mu(\Omega_\beta)} }{\|\pi_{\lambda_{1,\beta}}\psi_\beta\|^2_{L^2_\mu(\Omega_\beta)}}\\
+                &=\frac{\||\nabla \psi_\beta|\|^2_{L_\mu^2(\Omega_\beta)}+\O(\|\cL_\beta \psi_\beta\|^2_{L^2_\mu(\Omega_\beta)})}{\|\psi_\beta-(1-\pi_{\lambda_{1,\beta}})\psi_\beta\|^2_{L^2_\mu(\Omega_\beta)}}\\
+                &=\frac{\||\nabla \psi_\beta|\|^2_{L_\mu^2(\Omega_\beta)}+\O(\|\cL_\beta \psi_\beta\|^2_{L^2_\mu(\Omega_\beta)})}{1+\|(1-\pi_{\lambda_{\beta,1}})\psi_\beta\|^2_{L^2_\mu(\Omega_\beta)} - 2\left\langle (1-\pi_{\lambda_{\beta,1}})\psi_\beta,\psi_\beta\right\rangle_{L^2_\mu(\Omega_\beta)}}\\
+                &=\frac{\||\nabla \psi_\beta|\|^2_{L_\mu^2(\Omega_\beta)}+\O(\|\cL_\beta \psi_\beta\|^2_{L^2_\mu(\Omega_\beta)})}{1+\O(\|\cL_\beta \psi_\beta\|_{L^2_\mu(\Omega)})}
+            \end{align*}
+
+            We estimate the denominator, using a Cauchy--Schwarz inequality and~$\|\psi_\beta\|_{L^2_\mu(\Omega_\beta)}=1$:
+            \[
+            \begin{aligned}    
+            \|\psi_\beta-(1-\pi_{\lambda_{1,\beta}})\psi_\beta\|^2_{L^2_\mu(\Omega_\beta)} &= 1 + \O(\|(1-\pi_{\lambda_{1,\beta}})\psi_\beta\|^2_{L^2_\mu(\Omega_\beta)}) + \O(\|(1-\pi_{\lambda_{1,\beta}})\psi_\beta\|_{L^2_\mu(\Omega_\beta)})\\
+            &= 1 + \O(\|(1-\pi_{\lambda_{1,\beta}})\psi_\beta\|_{L^2_\mu(\Omega_\beta)})\\
+            &= 1 + \O(\|\cL_\beta \psi_\beta\|_{L^2_\mu(\Omega_\beta)})\\
+            &= 1 + \O()\| \|
+            \end{aligned}
+        \]
+        \end{proof}
 
         \section{Application to domain optimization}
         \label{sec:parrep}
@@ -1537,6 +1704,7 @@ cross/.default={1pt}}
 
     The following result is a version of Laplace's method in which the asymptotic concerns both the integrand and the domain of integration.
     \begin{lemma}
+        \label{lemma:laplace}
         We consider a family of Borel sets~$\{A_\lambda\}_{\lambda\geq 0}$ of~$\R^d$, and two functions~$f$ and~$g$.
         We are interested in computing the leading-order asymptotics as~$\lambda\to+\infty$ of quantities of the form 
        ~$$I_\lambda = \int_{A_\lambda}\e^{-\lambda f(x)}g(x)\,\d x.$$
