@@ -27,7 +27,10 @@
 \usepackage{relsize}
 \usepackage{todonotes}
 
+\mathtoolsset{showonlyrefs=true}
 %% custom commands
+
+
 \newcommand{\cL}{\mathcal{L}}
 \renewcommand{\d}{\mathrm{d}}
 \newcommand{\e}{\mathrm{e}}
@@ -130,7 +133,6 @@ cross/.default={1pt}}
 % - Retirer la dépendance en {i} de \deltaRadius{} et \gammaPerturbation{}
 % - Faire argument perturbation du domaine avec Sard, 
 % - Faire des dessins au niveau des constructions (perturbation du domaine) + quasimodes au niveau des points selles
-% - Calculer erreur asymptotique dans Laplace critique (en \O(\beta) a priori)
 % - Conclure la preuve du théorème 2
 % - Reformuler les estimations de queues gaussiennes avec des \O plutot que des constantes, absorber les termes polynomiaux dans les constantes
 % - Quantifier l'erreur commise dans le Théorème 1 -- peut-on passer par les \gammaPerturbation{} plutôt que de fixer un seuil~\rho?
@@ -1417,7 +1419,176 @@ cross/.default={1pt}}
             \end{equation}
             where~$Z_\beta$ is a normalizing constant imposing~$\|\psi_\beta\|_{L_\mu^2(\Omega_\beta)}=1$.
 
-        \subsection{}
+        \subsection{Proof of the Eyring--Kramers formula}
+
+        We begin the section by the key technical tool, which is the following extension of Laplace's method for exponential integrals, giving sharp asymptotics in the case where the domain of integration varies with the asymptotic parameter, and the minimum is close to (but not necessarily in) the domain.
+        \begin{theorem}
+            \label{thm:laplace}
+                We consider two real-valued functions~$f$ and~$g$ defined on~$\R^d$, and a family~$(A_\lambda)_{\lambda>0}$ of Borel sets. Assume that there exists Borel sets~$\mathcal K,A_\infty\subseteq \R^d$ with non-empty interiors,~$x_0\in \overset{\circ}{\mathcal K}$, and a constant~$\epsilon >0$ such that the following properties hold:
+                \begin{enumerate}[]
+                    \item{The set~$\mathcal K$ is compact, and \begin{equation}\label{eq:laplace_l1}\forall\,\lambda >0,\,A_\lambda \subseteq \mathcal K, \tag{\bf L1}\end{equation}}
+                    \item{\begin{equation}\label{eq:laplace_l2}f \in \mathcal C^{\infty}(\mathcal K),\, g \in \mathcal C^{2}(\mathcal K), \tag{\bf L2}\end{equation}}
+                    \item{\begin{equation}\label{eq:laplace_l3}\underset{x\in\mathcal K}{\mathrm{Argmin}}\,f(x) = \{x_0\},\quad \nabla^2 f(x_0) > \epsilon \tag{\bf L3}\end{equation} in the sense of symmetric matrices.}
+                    \item{\begin{equation}\label{eq:laplace_l4} \left|\left[\sqrt\lambda(A_\lambda -x_0)\right] \triangle A_\infty\right| \xrightarrow[]{\lambda \to +\infty}0,\tag{\bf L4}\end{equation}where~$\triangle$ denotes the symmetric difference of sets.}
+                    % \item{For every~$\delta >0$, there exists~$\lambda_0>0$ such that\begin{equation}\label{eq:laplace_l5}\forall\,\lambda>\lambda_0,\,B(x_0,\delta)\cap A_\lambda \neq \emptyset. \tag{\bf L5} \end{equation}}
+                \end{enumerate}
+            \todo[inline]{L4 suffisante pas nécessaire}
+            Then, 
+            \begin{equation}
+                \label{eq:laplace_asymptotics}
+                \int_{A_\lambda} \e^{-\lambda f(x)}g(x)\,\d x = \left(\frac{2\pi}{\lambda}\right)^{\frac d2}\e^{-\lambda f(x_0)}\det \nabla^2 f(x_0)^{-\frac12}g(x_0)\P(\xi \in A_\infty)\left(1+\O(\epsilon(\lambda)^{\frac12}) + \O(\lambda^{-\frac r2})\right)
+            \end{equation}
+            as~$\lambda\to +\infty$, where~$\xi$ is a Gaussian random variable with distribution~$\mathcal N\left(0,\nabla^2 f(x_0)^{-1}\right)$, and the dominant error terms are determined by:
+            $$\varepsilon(\lambda) = \P\left(\xi \in \left[\sqrt\lambda\left(A_\lambda-x_0\right)\right] \triangle\, A_\infty\right),$$
+            and
+            \[\begin{cases}
+                r = 2,& \text{if } A_\infty = -A_\infty,\\
+                r =1 & \text{otherwise}.
+            \end{cases}
+            \]
+        \end{theorem}
+
+        \begin{remark}
+            The regularity assumptions may be weakened to~$f\in \mathcal C^4(\mathcal K)$.
+            Furthermore, the result still holds true assuming only that~$\mathcal K$ is closed but not necessarily bounded, requiring instead that~$g\in L^1(\mathcal K)$, and, for every~$\delta >0$:
+            \begin{equation}
+                \gamma(\delta) := \underset{x\in \mathcal K \setminus B(x_0,\delta)}{\inf}\, \{f(x)-f(x_0)\}>0.
+            \end{equation}
+            The proof of this variant is the same verbatim as what follows, upon defining instead~$\gamma := \gamma(\delta)$.
+        \end{remark}
+    
+        \begin{proof}
+            Up to a translation by~$x_0$ and considering instead~$\tilde f(x)=f(x)-f(x_0)$,~$\tilde g(x)=g(x)/g(x_0)$, we may assume without loss of generality that~$x_0=0$,~$f(0) = 0$ and~$g(0)=1$.
+
+            Let us denote~$H := \nabla^2 f(0)$ the Hessian of~$f$ at the minimum, which, according to~\eqref{eq:laplace_l3}, is bounded from below by~$\epsilon>0$.
+            We will make use of the following Taylor expansions, whose existence is guaranteed by~\eqref{eq:laplace_l2}.
+            \begin{equation}
+                \label{eq:laplace_taylor_f}
+                f(x) = \frac12 x^\intercal H x + R_f(x),\quad R_f(x) = \frac12\int_0^1 (1-t)^2 D^3 f(tx):x^{\otimes 3} \,\d t,
+            \end{equation}
+            \begin{equation}
+                \label{eq:laplace_taylor_g}
+                g(x) = 1 + x^\intercal \nabla g(0) + R_g(x),\quad R_g(x)=\int_0^1 (1-t) x^\intercal \nabla^2 g(tx)x\,\d t.
+            \end{equation}
+
+
+            Let~$\delta>0$ be such that~$B(0,\delta) \subset \mathcal K$, which exists since~$x_0\in\overset{\circ}{\mathcal K}$. We may furthermore assume, according to~\eqref{eq:laplace_taylor_f}, that for some~$C>0$:
+            \begin{equation}
+                \label{eq:laplace_f_minorization}
+                \forall\,x\in B(0,\delta),\, f(x) \geq \frac1C |x|^2,\quad |R_f(x)| \leq C|x|^3,\quad |R_g(x)| \leq C|x|^2.
+            \end{equation}
+            
+            Then, by~\eqref{eq:laplace_l3} and the continuity of~$f$:
+            \begin{equation}
+                \gamma := \underset{x\in \mathcal K\setminus B(0,\delta)}{\inf}\, f(x) > 0.
+            \end{equation}
+            Hence we estimate, using the inclusion~\eqref{eq:laplace_l1}:
+            \begin{equation}
+                \left|\int_{A_\lambda \setminus B(0,\delta)} \e^{-\lambda f(x)}g(x)\,\d x\right| \leq \e^{-\lambda \gamma} \|g\|_{L^1(\mathcal K)} = \O(\e^{-\lambda\gamma}),
+            \end{equation}
+            since~$g$ is integrable on~$\mathcal K$ by~\eqref{eq:laplace_l2}.
+
+            It remains to estimate
+            \begin{equation}
+                I(\lambda,1) := \int_{A_\lambda \cap B(0,\delta)} \e^{-\lambda f(x)}g(x)\,\d x,
+            \end{equation}
+            for which we use the following Feynman trick, introducing, for~$0\leq t\leq 1$:
+            \begin{equation}
+                I(\lambda,t) := \int_{A_\lambda \cap B(0,\delta)} \e^{-\lambda\left(\frac12 x^\intercal H x + t R_f(x)\right)}g(x)\,\d t.
+            \end{equation}
+
+            From~\eqref{eq:laplace_f_minorization} and~\eqref{eq:laplace_l3}, we deduce that~$c = \min\{\frac1C,\epsilon/2\}>0$ is such that:
+            \begin{equation}
+                \label{eq:laplace_interpolation_positivity}
+                \forall 0\leq t\leq 1,\,\frac 12x^\intercal H x + t R_f(x) = \frac{1-t}2x^\intercal H x + tf(x) \geq c|x|^2.
+            \end{equation}
+            We then write, by Taylor's theorem:
+            \begin{equation}
+                I(\lambda,1) = I(\lambda,0) + \frac{\partial I}{\partial t}(\lambda,0)  + \int_0^1 \frac{\partial^2 I}{\partial t^2}(\lambda,t)(1-t)\,\d t,
+            \end{equation}
+            with
+            \begin{equation}
+                \frac{\partial^k I}{\partial t^k}(\lambda, t) = (-\lambda)^k\int_{A_\lambda \cap B(0,\delta)} \e^{-\lambda\left(\frac12x^\intercal H x +tR_f(x)\right)}R_f(x)^k g(x)\,\d x.
+            \end{equation}
+            We may then estimate, for~$k=2$, and making use of~\eqref{eq:laplace_f_minorization}:
+            \begin{equation}
+                \label{eq:laplace_error_a}
+                \begin{aligned}
+                    \left|\frac{\partial^2 I}{\partial t^2}(\lambda, t)\right| &\leq \|g\|_{L^\infty(B(0,\delta))} \lambda^2\int_{B(0,\delta)}\e^{-\lambda c|x|^2}R_f(x)^2\,\d x\\
+                    &\leq C\lambda^2\int_{B(0,\delta)}\e^{- \lambda c|x|^2}|x|^6\,\d x\\
+                    &\leq C \lambda^2 \lambda^{-\frac d2} \int_{\R^d} \e^{-c|y|^2} \lambda^{-\frac 62}|y|^6\,\d y = \lambda^{-\frac d2}\O(\lambda^{-1}),
+                \end{aligned}
+            \end{equation}
+            where we used the change of variables~$y=\sqrt\lambda x$ to obtain the last inequality.
+            It follows that
+            \begin{equation}
+                \label{eq:laplace_expansion}
+                I(\lambda,1) = \left[I + \frac{\partial I}{\partial t}\right](\lambda,0) + \lambda^{-\frac d2}\O(\lambda^{-1}).
+            \end{equation}
+            This is convenient, since the bracketed term may be expressed exactly in terms of a Gaussian expectation:
+            \begin{equation}
+                \begin{aligned}
+                    \left[I + \frac{\partial I}{\partial t}\right](\lambda,0) &= \int_{A_\lambda \cap B(0,\delta)} \e^{-\lambda \frac12 x^\intercal H x}\left(1 - \lambda R_f(x)\right)g(x)\, \d x\\
+                    &= \left(\frac{2\pi}{\lambda}\right)^{\frac d2}|\det H|^{-\frac12}\E\left[(1-\lambda R_f(\xi/\sqrt\lambda))g(\xi/\sqrt\lambda)\1_{\xi \in \sqrt\lambda A_\lambda \cap B(0,\sqrt\lambda \delta)}\right],
+                \end{aligned}
+            \end{equation}
+            where~$\xi\sim\mathcal N(0,H^{-1})$.
+            Before estimating the expectation, we record the further expansion:
+            \begin{equation}
+                \label{eq:laplace_taylor_f2}
+                R_f(x) = \frac 16 D^3 f(0):x^{\otimes 3} + \widetilde R_f(x),\quad |\widetilde R_f(x)|\leq \widetilde C |x|^4\, \text{on }B(0,\delta),
+            \end{equation}
+            which, together with~\eqref{eq:laplace_taylor_g}, allows to write:
+            \begin{equation}
+                \begin{aligned}
+                    (1-\lambda R_f(\xi/\sqrt\lambda))g(\xi/\sqrt\lambda) &= \left(1- \frac {\lambda^{-\frac12}}6 D^3 f(0):\xi^{\otimes 3} - \lambda\widetilde R_f(\xi/\sqrt\lambda)\right)\left(1 + \lambda^{-\frac12}\xi^\intercal \nabla g(0) + R_g(\xi/\sqrt\lambda)\right)\\
+                    &= 1 + \lambda^{-\frac12}\left[\xi^\intercal \nabla g(0)-\frac16 D^3 f(0):\xi^{\otimes 3}\right] + \lambda^{-1} Q(\xi,\lambda),
+                \end{aligned}
+            \end{equation}
+            where a straightforward computation and estimation using the bounds~\eqref{eq:laplace_f_minorization},~\eqref{eq:laplace_taylor_f2} shows that there exists~$K,\lambda_0 >0$ such that for all~$\lambda>\lambda_0$, it holds:
+            \begin{equation}
+                \left|Q(\xi,\lambda)\right|\1_{\xi\in B(0,\delta)} \leq K|\xi|^6.
+            \end{equation}
+            Thus,
+            \begin{equation}
+            \begin{aligned}
+                \E\left[(1-\lambda R_f(\xi/\sqrt\lambda))g(\xi/\sqrt\lambda)\1_{\xi \in \sqrt\lambda A_\lambda \cap B(0,\sqrt\lambda \delta)}\right] &= \E\left[(1-\lambda^{-\frac12}P(\xi))\1_{\xi\in A_\infty}\right]\\ 
+                &+ \E\left[(1+\lambda^{-\frac12}P(\xi))\left(\1_{\xi\in\sqrt\lambda \cap B(0\delta)}-\1_{\xi\in A_\infty}\right)\right] + \O(\lambda^{-1}),
+            \end{aligned}
+            \end{equation}
+            where~$P(\xi) = \xi^\intercal \nabla g(0)-\frac16 D^3 f(0):\xi^{\otimes 3}$ is a polynomial involving only odd moments of~$\xi$. By symmetry, the first term in the sum is then given by:
+            \begin{equation}
+                \label{eq:laplace_error_b}
+                \E\left[(1-\lambda^{-\frac12}P(\xi))\1_{\xi\in A_\infty}\right] = \begin{cases}
+                    \P(\xi \in A_\infty)&\text{if } A_\infty = - A_\infty,\\
+                    \P(\xi\in A_\infty)\left(1+\O(\lambda^{-\frac12})\right)&\text{otherwise.}
+                \end{cases}
+            \end{equation}
+            We are left with estimating
+            \begin{equation}
+                \begin{aligned}
+                    \left|\E\left[(1+\lambda^{-\frac12}P(\xi))\left(\1_{\xi\in\sqrt\lambda \cap B(0,\sqrt\lambda\delta)}-\1_{\xi\in A_\infty}\right)\right]\right| &\leq \E\left[\left|1 + \lambda^{-\frac12}P(\xi)\right|\1_{\xi\in\sqrt\lambda A_\lambda \setminus B(0,\sqrt\lambda\delta)}\right]\\
+                    &+ \E\left[\left|1 + \lambda^{-\frac12}P(\xi)\right|\left|\1_{\xi \in \sqrt\lambda A_\lambda}-\1_{\xi \in A_\infty}\right|\right].
+                \end{aligned}
+            \end{equation}
+
+            By a standard Gaussian decay estimate, the term
+            \[ \E\left[\left|1 + \lambda^{-\frac12}P(\xi)\right|\1_{\sqrt\lambda A_\lambda \setminus B(0,\sqrt\lambda\delta)}\right] = \O(\e^{-\frac{\lambda}2\epsilon \delta^2})\]
+            is negligible with respect to~$\lambda^{-1}$, and a final Cauchy--Schwarz inequality gives:
+            \[\E\left[\left|1 + \lambda^{-\frac12}P(\xi)\right|\left|\1_{\xi\in\sqrt\lambda A_\lambda}-\1_{\xi \in A_\infty}\right|\right]^2 \leq \E\left[\left(1 + \lambda^{-\frac12}P(\xi)\right)^2\right]\E\left[\left(\1_{\xi\in\sqrt\lambda A_\lambda}-\1_{\xi \in A_\infty}\right)^2\right].\]
+            Since~$\E\left[\left(1 + \lambda^{-\frac12}P(\xi)\right)^2\right] = \O(1)$, we only need to observe by a straightforward computation that
+            \begin{equation}
+                \label{eq:laplace_error_c}
+                \E\left[\left(\1_{\xi\in\sqrt\lambda A_\lambda}-\1_{\xi \in A_\infty}\right)^2\right] = \P\left(\xi \in \left[\sqrt\lambda A_\lambda\right]\triangle A_\infty\right) = \varepsilon(\lambda).
+            \end{equation}
+            Assumption~\eqref{eq:laplace_l4} implies that~$\varepsilon(\lambda) \xrightarrow[]{\lambda \to +\infty} 0$.
+        
+            In view of~\eqref{eq:laplace_expansion}, and collecting the estimates~\eqref{eq:laplace_error_a},~\eqref{eq:laplace_error_b}~\eqref{eq:laplace_error_c}, we have obtained:
+            \begin{equation}
+                I(\lambda,1) = \left(\frac{2\pi}{\lambda}\right)^{\frac d2}\det H^{-\frac12}\P(\xi \in A_\infty)\left(1+\O(\lambda^{-1})+\O(\epsilon(\lambda)^{\frac12})+ \O(\lambda^{-\frac 12})\1_{A_\infty \neq - A_\infty}\right),
+            \end{equation}
+            which gives the claimed asymptotic~\eqref{eq:laplace_asymptotics}.
+        \end{proof}
 
         \begin{proposition}[Critical Laplace asymptotics]
             For~$i=1,\dots,m$, the following hold:
@@ -1445,6 +1616,7 @@ cross/.default={1pt}}
 
         \end{proposition}
         \begin{proof}
+            These identities follow from applying Theorem~\ref{thm:laplace} on the~$\localNeighborhood[]{i}(\beta)$. As a preliminary step, we compute the order of the dominant error term in the asymptotic expansion.
             The usual Laplace method yields~\eqref{eq:laplace_a}.
             \todo[inline]{à préciser}
             Let us fix~$i=1,\dots,m$, and for convenience, we use a set of coordinates adapted to the Hessian of~$V$ at $z_i$:
@@ -1601,9 +1773,6 @@ cross/.default={1pt}}
         so that the~$\inf$ is taken over a smaller set in the expression for~$\lambda_k(D_1)$.
         \end{proof}
     \end{lemma}
-    \begin{corollary}
-        The map~$\beta \mapsto \lambda_{k,\beta}$ is non-decreasing for all~$k$, since~$\beta\mapsto~H_0^1\cap~H^2(\Omega_\beta;\mu)$ is non-increasing.
-    \end{corollary}
 
     A key technical tool is the following formula, which allows to decompose Schr\"odinger operators as sums of localized terms, at the cost of an error term involving gradients of cutoff functions.
     \begin{lemma}\label{lemma:ims_formula}
@@ -1702,63 +1871,7 @@ cross/.default={1pt}}
         \end{enumerate}        
     \end{proof}
 
-    The following result is a version of Laplace's method in which the asymptotic concerns both the integrand and the domain of integration.
-    \begin{lemma}
-        \label{lemma:laplace}
-        We consider a family of Borel sets~$\{A_\lambda\}_{\lambda\geq 0}$ of~$\R^d$, and two functions~$f$ and~$g$.
-        We are interested in computing the leading-order asymptotics as~$\lambda\to+\infty$ of quantities of the form 
-       ~$$I_\lambda = \int_{A_\lambda}\e^{-\lambda f(x)}g(x)\,\d x.$$
-        Assume:
-        \begin{enumerate}[i)]
-            \item{\label{hyp:fc2}The function~$f$ is~$\mathcal C^2$ and has a unique non-degenerate global and local minimum~$x_0$ in~$\R^d$.}
-            \item{\label{hyp:strong_min}The unique local and global minimum~$x_0$ belongs to~$\overline A_\lambda$ for all~$\lambda\geq 0$.}
-            \item{\label{hyp:gc0}The function~$g$ is in~$C^0\cap L^1 (\R^d)$, and~$g(x_0)\neq 0$.}
-            % \item{There exists~$\lambda_0>0$ such that~$$\int_{\R^d}\e^{-\lambda_0 f(x)}|g(x)| < +\infty.$$}
-            \item{\label{hyp:domain_conv}The sequence~$\sqrt{\lambda}(A_\lambda - x_0)$ converges to a Borel set:~$$\bigcap_{\lambda \geq 0} \bigcup_{\mu\geq\lambda} \sqrt{\lambda}(A_\mu-x_0) = \bigcup_{\lambda \geq 0} \bigcap_{\mu \geq \lambda}\, \sqrt\lambda ( A_\mu - x_0) = A_\infty \in \mathcal{B}(\R^d),$$
-            which furthermore has a negligible boundary:~$\left|\partial A_\infty \right|=0$.}
-        \end{enumerate}
-        Then, the following asymptotic equivalent holds:
-        \begin{equation}
-            \label{eq:laplace_method}
-            I_\lambda \widesim{\lambda\to\infty} \e^{-\lambda f(x_0)}g(x_0)\left(\frac{2\pi}{\lambda}\right)^{\frac d2}\left|\det\,\nabla^2 f(x_0)\right|^{-\frac12}\,\mathbb{P}\left(\xi \in A_\infty\right),\quad\,{\xi\sim \mathcal N\left(0,\nabla^2 f(x_0)^{-1}\right)}
-        \end{equation}
-    \end{lemma}
-    \todo[inline]{hypothese ou argument supplementaire car~$f(x)\to f(x_0)$ peut-être pb quand~$x\to\infty$}
 
-    \begin{proof}
-        Upon replacing~$f$ by~$f-f(x_0)$, changing~$g$ to~$g/g(x_0)$ and~$x$ to~$x-x_0$, we may assume without loss of generality that~$x_0 = 0$, with~$f(0)=0$ and~$\nabla f(0) = 0$, that~$H=\nabla^2 f(0)$ is positive definite and that~$g(0)=1$.
-
-        Let~$0<\varepsilon<\varepsilon_0$, such that~$H-\varepsilon_0 I$ is positive definite. By assumptions~\ref{hyp:fc2} and~\ref{hyp:gc0}, and using a Taylor expansion, there exists~$\delta>0$ such that for all~$|x|<\delta$.
-       ~$$ \left|f(x)-\frac12x^\intercal H x \right|<\frac\varepsilon2 |x|^2,\quad |g(x)-1|\leq \varepsilon,$$
-        By assumptions~\ref{hyp:gc0} and~\ref{hyp:strong_min} we are also free to assume that,~$f(x) > \eta$ for~$|x|\geq \delta$ and some~$\eta>0$.
-
-        Writing~$I_\lambda$ as the sum of a local term and a remainder,
-        \begin{equation}
-            \label{eq:l7_pf1}
-            I_\lambda = \int_{A_\lambda \cap B(0,\delta)} \e^{-\lambda f(x)}g(x)\,\d x + \int_{A_\lambda\setminus B(0,\delta)}\e^{-\lambda f(x)}g(x)\,\d x,
-        \end{equation}
-        we note that we can bound the remainder term by a quantity which is exponentially small with respect to~$\lambda$:
-       ~$$\left|\int_{A_\lambda\setminus B(0,\delta)} \e^{-\lambda f(x)}g(x)\,\d x \right| \leq \e^{-\lambda \eta} \| g\|_{L^1(\R^d)}.$$
-
-        Next, we bound the local term from above: 
-        \[\int_{A_\lambda \cap B(0,\delta)} \e^{-\lambda f(x)}g(x)\,\d x \leq (1+\varepsilon)\int_{A_\lambda \cap B(0,\delta)}\e^{-\frac\lambda2x^\intercal (H-\varepsilon I) x}\,\d x \leq (1+\varepsilon)\int_{A_\lambda}\e^{-\frac\lambda 2x^\intercal(H-\varepsilon I)x}\,\d x.\]
-        Using~$y=\sqrt\lambda x$, we obtain
-        \[\int_{A_\lambda} \e^{-\frac\lambda2 x^\intercal (H-\varepsilon I)x}\,\d x  = \lambda^{-\frac d2}\int_{\sqrt\lambda A_\lambda}\e^{-\frac12 y^\intercal (H-\varepsilon I) y}\,\d y = \left(\frac{2\pi}\lambda\right)^{\frac d2}|\det\,(H-\varepsilon I)|^{-\frac12}\P(\xi_{\varepsilon} \in \sqrt\lambda A_\lambda),\]
-        where~$\xi_\varepsilon \sim \mathcal N(0,(H-\varepsilon I)^{-1})$. Denote 
-        \[C_\varepsilon = (1+\varepsilon)\left(2\pi\right)^{\frac d2}|\det\,(H-\varepsilon I)|^{-\frac12}.\]
-        Then, we get
-        \[\underset{\lambda\to\infty}{\overline{\lim}}\,\lambda^{\frac d2}{I_\lambda}\leq \underset{\lambda\to\infty}{\overline{\lim}} \lambda^{\frac d2}\e^{-\lambda\eta}\|g\|_{L^1}  + C_\varepsilon\P(\xi_\varepsilon\in\sqrt\lambda A_\lambda) = C_\varepsilon\P(\xi_\varepsilon \in A_\infty),\]
-        since assumption~\ref{hyp:domain_conv} is equivalent to the Lebesgue almost-everywhere convergence of~$\mathbbm{1}_{\sqrt\lambda (A_\lambda-x_0)}$ to~$\mathbbm{1}_{A_\infty}$.
-        Since~$\xi_\varepsilon \overset{\cL}{\underset{\varepsilon\to 0}{\longrightarrow}} \xi \sim \mathcal N(0,H^{-1})$ and~$|\partial A_\infty|=0$, the Portmanteau lemma together with~$C_\varepsilon \overset{\varepsilon_\to 0}{\longrightarrow} C = (2\pi)^{\frac d2} | \det H|^{-\frac12}$ yields the desired upper bound upon taking the limit~$\varepsilon\to 0$.
-
-        For the lower bound, we write similarly
-        \[\int_{A_\lambda \cap B(0,\delta)} \e^{-\lambda f(x)}g(x)\,\d x\geq (1-\varepsilon)\int_{A_\lambda \cap B(0,\delta)}\e^{-\frac\lambda2x^\intercal(H+\varepsilon I)x}\,\d x,\]
-        whereby an identical argument yields
-        \[ \underset{\lambda\to\infty}{\underline\lim}\,\lambda^{\frac d2}I_\lambda \geq \underset{\lambda\to\infty}{\underline\lim}\,\lambda^{\frac d2}\e^{-\lambda\eta}\|g\|_{L^1} + C_\varepsilon'\P\left(\xi_\varepsilon' \in \left[\sqrt\lambda A_\lambda \cap B(0,\sqrt\lambda\delta)\right]\right)= C_\varepsilon'\P(\xi_\varepsilon'\in A_\infty),\]
-        where this time~$\xi_\varepsilon' \sim \mathcal N(0,(H+\varepsilon I)^{-1})$,~$ C_\varepsilon ' = (1-\varepsilon) (2\pi)^{\frac d2} |\det (H+\varepsilon I)|^{-\frac 12}$, and where we used the almost-everywhere convergence~$\mathbbm 1_{\sqrt \lambda A_\lambda} \mathbbm 1_{B(0,\sqrt \lambda \delta)} \overset{\lambda\to \infty}{\longrightarrow} \mathbbm 1_{A_\infty}$.
-        Using the convergence in distribution~$\xi_\varepsilon' \overset{\cL}{\underset{\varepsilon\to 0}{\longrightarrow}}\xi$ with the Portmanteau lemma once again, and the convergence~$C_\varepsilon'\to C$, we finally get
-        \[C \P(\xi\in A_\infty) \leq \underset{\lambda\to\infty}{\underline\lim}\,\lambda^{\frac d2}I_\lambda\leq \underset{\lambda\to\infty}{\overline\lim}\,\lambda^{\frac d2}I_\lambda \leq C \P(\xi\in A_\infty).\]
-    \end{proof}
 
 % \section{Results}
 %     In the following proposition we record (standard) facts on the spectral decomposition of the harmonic oscillator~$K^{(i)}$, or the Dirichlet realization thereof on three model spaces.
