@@ -1,0 +1,189 @@
+include "getARGV.idp"
+
+func string padint(int i, int len){ // pad int to given length with zeros
+  string ss = i;
+  int nn = ss.length; 
+  for(int i=0;i<len-nn;i++)
+    ss = "0"+ss;
+  return ss;
+}
+
+int maxiter = getARGV("--maxiter",1000); // maximal number of optimization steps (line searches)
+real lr = getARGV("--lr",1e-3); // initial time step for the line search
+real beta = getARGV("--beta",10); // inverse temperature
+real gamma = getARGV("--gamma",1.0); // extension regularization parameter
+real lrmin = getARGV("--lrmin",1e-5); // minimal time step
+real lrmax = getARGV("--lrmax",1e-2); // maximal time step
+real lrmult = getARGV("--lrmult",1.3); // time step multiplier for line search
+int nBoundary = getARGV("--nboundary",500); //number of points on the boundary
+int plotEvery = getARGV("--plotfreq",10); //frequency of plots
+
+string logpath = getARGV("--logpath","./logs") +"/"; // path to store the logfile
+string impath = getARGV("--imgpath","./imgs/") +"/"; // path to store the plots
+string prefix = getARGV("--prefix",""); // prefix to prepend to every output file
+
+
+// make folder tree
+system("mkdir -p "+logpath);
+system("mkdir -p "+impath+"/V/");
+system("mkdir -p "+impath+"/u1/");
+system("mkdir -p "+impath+"/u2/");
+system("mkdir -p "+impath+"/theta/");
+
+ofstream logfile(logpath+prefix+"_log_"+beta+".out");
+
+logfile << "ITERATION LAMBDA1 LAMBDA2 DERIVATIVE LINESEARCH_STEPS TIMESTEP" << endl;
+int nev=2; // number of eigvals
+
+
+
+// geometry
+func U = (x^2 + y^2 + 0.5*x*y)*exp(-((x^2 + y^2 + 0.5*x*y))) - 0.3*( exp(-x^2-2*(y+1)^2));
+// func U = cos(2*pi*(x-0.5))-cos(2*pi*(y-x));
+// func U = 3 * exp(-x^2) * (exp(-(y - 1 / 3)^2) - exp(-(y - 5 / 3)^2)) - 5 * exp(-y^2) * (exp(-(x - 1)^2) + exp(-(x + 1)^2)) + 0.2 * x^4 + 0.2 * (y - 1 / 3)^4;
+func mu = exp(-beta * U(x,y));
+
+
+real r0 = 0.4, corex = 0.0, corey = -0.2;
+
+
+border dOmega(t=0,2*pi){x = corex+r0*cos(t); y = corey+r0*sin(t); label=1;};
+mesh Th = buildmesh(dOmega(nBoundary));
+
+
+// useful macros
+macro Grad(u, v) [dx(u), dy(u), dx(v), dy(v)] // EOM
+macro tr(M) M' //EOM
+macro dotN(u1,u2) (u1*N.x+u2*N.y) //EOM
+
+// FE spaces and variables
+
+fespace Vh(Th,P1); // for eigenproblem
+fespace Vhvec(Th,[P1,P1]); // for shape perturbations
+
+Vh Uh = U; // interpolated potential
+Vh muh = mu; // interpolated mu 
+
+plot(Uh,value=true,fill=true,wait=true,boundary=true,dim=3);
+plot(muh,value=true,fill=true,wait=true,boundary=true,dim=3);
+
+varf a(u,v) = int2d(Th)((dx(u)*dx(v)+dy(u)*dy(v))*mu) + on(1,u=0); // variational lhs for weighted Dirichlet eigenproblem
+varf b(u,v) = int2d(Th)(u*v*mu); // variational rhs
+
+matrix A,B ;  // fem matrices
+matrix At,Bt;
+
+real[int] evalues(nev); // eigenvalues
+Vh[int] evectors(nev); // eigenvectors
+
+Vhvec [thetax,thetay] , [wx,wy]; // shape gradient extension variables
+
+int iter = 0;
+real nabla,eta;
+
+int k;
+real J,Jmin,etamax;
+
+cout << "Initial objective: " << Jmin <<endl;
+    
+savemesh(Th,"checkpoint.mesh"); //initial mesh
+
+while(iter < maxiter){
+
+    logfile << iter << " ";
+    A = a(Vh,Vh);
+    B = b(Vh,Vh);
+    set(A,solver=sparsesolver);
+    set(B,solver=sparsesolver);
+
+    Uh = U;
+    muh = mu;
+
+    k = EigenValue(A,B,sym=true,sigma=0.0,value=evalues,vector=evectors,tol=1e-20); // compute eigenvalues
+    J = log(evalues[0]/evalues[1]);
+    Jmin = min(J,Jmin);
+
+
+    logfile << evalues[0]<< " ";
+    logfile << evalues[1] << " ";
+
+    if(evectors[0](corex,corey) < 0) evectors[0] = -evectors[0];
+
+
+    func phi = ((dx(evectors[1])*N.x + dy(evectors[1])*N.y)^2/evalues[1] - (dx(evectors[0])*N.x + dy(evectors[0])*N.y)^2/evalues[0])/beta; // shape gradient with respect to L^2_mu scalar product
+
+    solve extension([thetax,thetay],[wx,wy]) = int2d(Th)(gamma * tr(Grad(thetax,thetay))*Grad(wx,wy) + [thetax,thetay]'*[wx,wy]*mu) -int1d(Th,1)(phi*dotN(wx,wy)*mu);
+
+    // the solution theta to the variational problem above is a guaranteed ascent direction (at the continuous level) for the shape functional log(lambda1/lambda2)
+    // the parameter gamma may be used to tune the regularizing effect
+
+    Vh gradnormh = [thetax,thetay]'*[thetax,thetay];
+
+    // make plots if necessary
+    if(iter % plotEvery == 0){
+      plot(evectors[0],value=true,fill=true,boundary=true,ps = impath + "/u1/" + prefix +"_"+ padint(iter,4) + "_" + beta+".eps");
+      plot(evectors[1],value=true,fill=true,boundary=true,ps = impath + "/u2/" + prefix +"_"+padint(iter,4)+"_"+beta+".eps" );
+      plot(Uh,value=true,fill=true,boundary=true,ps = impath + "/V/" + prefix +"_"+padint(iter,4)+"_"+beta+".eps" );
+      plot(gradnormh,boundary=true,value=true,fill=true,ps = impath + "/theta/" + prefix +"_"+padint(iter,4)+"_"+beta+".eps" );
+    }
+
+    logfile << int1d(Th,1)(phi*mu*(thetax*N.x+thetay*N.y)) << " "; // "speed" of objective function
+
+    int nsteps = 0;
+    mesh Thtmp = Th;
+
+    //find optimal step size with line search
+
+    real bestJ = J; 
+    real besteta = 0;
+
+    eta = lr;
+
+    while((eta > lrmin) && (eta < lrmax)){
+      nsteps +=1;
+      Th = Thtmp; // load base mesh
+      real Amin = checkmovemesh(Th,[x-eta*thetax,y-eta*thetay]); // check if move is legal
+
+      if(Amin>0){//if move is legal, check objective with this move
+        Th = movemesh(Th,[x-eta*thetax,y-eta*thetay]);
+        Uh = U;
+        muh = mu;
+        A = a(Vh,Vh);
+        B = b(Vh,Vh);
+
+        k = EigenValue(A,B,sym=true,sigma=0.0,value=evalues,vector=evectors,tol=1e-20);
+        real Jt = log(evalues[0]/evalues[1]);
+
+        cout << "(" << Jt<<","<<eta<<") ";
+
+        if(Jt<bestJ){ // record 
+          besteta = eta;
+          bestJ = Jt;
+          eta *= lrmult;
+        }
+        else{ // overshot
+          if(besteta>0)
+            break;
+          eta /= lrmult;
+        }
+      }
+      else{
+        eta /= lrmult;
+      }
+    }
+
+    logfile << nsteps << " " << besteta << " ";
+
+
+    if(besteta==0) // no improvement over previous shape 
+      break;
+
+    logfile << endl;
+
+    Th = movemesh(Thtmp,[x-besteta*thetax,y-besteta*thetay]);
+
+    iter++;
+
+    logfile.flush;
+    savemesh(Th,logpath+prefix+"_"+beta+".msh");
+}
