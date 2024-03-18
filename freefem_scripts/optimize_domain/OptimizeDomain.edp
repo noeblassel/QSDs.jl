@@ -64,8 +64,8 @@ fespace Vhvec(Th,[P1,P1]); // for shape perturbations
 Vh Uh = U; // interpolated potential
 Vh muh = mu; // interpolated mu 
 
-plot(Uh,value=true,fill=true,wait=true,boundary=true,dim=3);
-plot(muh,value=true,fill=true,wait=true,boundary=true,dim=3);
+// plot(Uh,value=true,fill=true,boundary=true,dim=3);
+// plot(muh,value=true,fill=true,wait=true,boundary=true,dim=3);
 
 varf a(u,v) = int2d(Th)((dx(u)*dx(v)+dy(u)*dy(v))*mu) + on(1,u=0); // variational lhs for weighted Dirichlet eigenproblem
 varf b(u,v) = int2d(Th)(u*v*mu); // variational rhs
